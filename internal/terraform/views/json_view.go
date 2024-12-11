@@ -17,10 +17,10 @@ type Message interface {
 // terraform/internal/command/views/json_view.go
 
 type BaseMsg struct {
-	Level     string           `json:"level"`
-	Message   string           `json:"message"`
-	Module    string           `json:"module"`
-	TimeStamp time.Time        `json:"time_stamp"`
+	Level     string           `json:"@level"`
+	Message   string           `json:"@message"`
+	Module    string           `json:"@module"`
+	TimeStamp time.Time        `json:"@timestamp"`
 	Type      json.MessageType `json:"type"`
 }
 
@@ -104,7 +104,7 @@ func (m ChangeSummaryMsg) BaseMessage() BaseMsg {
 
 type OutputMsg struct {
 	BaseMsg
-	Outputs *json.Output `json:"outputs"`
+	Outputs json.Outputs `json:"outputs"`
 }
 
 func (m OutputMsg) BaseMessage() BaseMsg {
@@ -113,108 +113,11 @@ func (m OutputMsg) BaseMessage() BaseMsg {
 
 type HookMsg struct {
 	BaseMsg
-	json.Hooker
+	json.Hooker `json:"hook"`
 }
 
 func (m HookMsg) BaseMessage() BaseMsg {
 	return m.BaseMsg
-}
-
-func (m HookMsg) MarshalJSON() ([]byte, error) {
-	switch hooker := m.Hooker.(type) {
-	case json.OperationStart:
-		mm := struct {
-			BaseMsg
-			json.OperationStart
-		}{
-			BaseMsg:        m.BaseMsg,
-			OperationStart: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.OperationProgress:
-		mm := struct {
-			BaseMsg
-			json.OperationProgress
-		}{
-			BaseMsg:           m.BaseMsg,
-			OperationProgress: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.OperationComplete:
-		mm := struct {
-			BaseMsg
-			json.OperationComplete
-		}{
-			BaseMsg:           m.BaseMsg,
-			OperationComplete: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.OperationErrored:
-		mm := struct {
-			BaseMsg
-			json.OperationErrored
-		}{
-			BaseMsg:          m.BaseMsg,
-			OperationErrored: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.ProvisionStart:
-		mm := struct {
-			BaseMsg
-			json.ProvisionStart
-		}{
-			BaseMsg:        m.BaseMsg,
-			ProvisionStart: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.ProvisionProgress:
-		mm := struct {
-			BaseMsg
-			json.ProvisionProgress
-		}{
-			BaseMsg:           m.BaseMsg,
-			ProvisionProgress: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.ProvisionComplete:
-		mm := struct {
-			BaseMsg
-			json.ProvisionComplete
-		}{
-			BaseMsg:           m.BaseMsg,
-			ProvisionComplete: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.ProvisionErrored:
-		mm := struct {
-			BaseMsg
-			json.ProvisionErrored
-		}{
-			BaseMsg:          m.BaseMsg,
-			ProvisionErrored: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.RefreshStart:
-		mm := struct {
-			BaseMsg
-			json.RefreshStart
-		}{
-			BaseMsg:      m.BaseMsg,
-			RefreshStart: hooker,
-		}
-		return gojson.Marshal(mm)
-	case json.RefreshComplete:
-		mm := struct {
-			BaseMsg
-			json.RefreshComplete
-		}{
-			BaseMsg:         m.BaseMsg,
-			RefreshComplete: hooker,
-		}
-		return gojson.Marshal(mm)
-	default:
-		return nil, fmt.Errorf("unknown hook type: %T", m.Hooker)
-	}
 }
 
 func UnmarshalMessage(b []byte) (Message, error) {
@@ -296,7 +199,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageApplyStart, json.MessageEphemeralOpStart:
 		temp := struct {
 			BaseMsg
-			json.OperationStart
+			json.OperationStart `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -310,7 +213,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageApplyProgress, json.MessageEphemeralOpProgress:
 		temp := struct {
 			BaseMsg
-			json.OperationProgress
+			json.OperationProgress `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -324,7 +227,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageApplyComplete, json.MessageEphemeralOpComplete:
 		temp := struct {
 			BaseMsg
-			json.OperationComplete
+			json.OperationComplete `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -338,7 +241,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageApplyErrored, json.MessageEphemeralOpErrored:
 		temp := struct {
 			BaseMsg
-			json.OperationErrored
+			json.OperationErrored `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -352,7 +255,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageProvisionStart:
 		temp := struct {
 			BaseMsg
-			json.ProvisionStart
+			json.ProvisionStart `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -366,7 +269,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageProvisionProgress:
 		temp := struct {
 			BaseMsg
-			json.ProvisionProgress
+			json.ProvisionProgress `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -380,7 +283,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageProvisionComplete:
 		temp := struct {
 			BaseMsg
-			json.ProvisionComplete
+			json.ProvisionComplete `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -394,7 +297,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageProvisionErrored:
 		temp := struct {
 			BaseMsg
-			json.ProvisionErrored
+			json.ProvisionErrored `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -408,7 +311,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageRefreshStart:
 		temp := struct {
 			BaseMsg
-			json.RefreshStart
+			json.RefreshStart `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err
@@ -422,7 +325,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 	case json.MessageRefreshComplete:
 		temp := struct {
 			BaseMsg
-			json.RefreshComplete
+			json.RefreshComplete `json:"hook"`
 		}{}
 		if err := gojson.Unmarshal(b, &temp); err != nil {
 			return nil, err

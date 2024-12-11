@@ -8,3 +8,5 @@ type Output struct {
 	Value     json.RawMessage `json:"value,omitempty"`
 	Action    ChangeAction    `json:"action,omitempty"`
 }
+
+type Outputs map[string]Output

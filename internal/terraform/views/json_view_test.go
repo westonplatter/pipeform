@@ -74,10 +74,10 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "version",
   "terraform": "1.10.0",
   "ui": "0.1.0"
@@ -92,10 +92,10 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "log",
   "k1": "v1"
 }
@@ -127,10 +127,10 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "diagnostic",
   "diagnostic": {
     "address": "foo.bar",
@@ -162,10 +162,10 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "planned_change",
   "change": {
 	  "resource": {
@@ -191,10 +191,10 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "resource_drift",
   "change": {
 	  "resource": {
@@ -220,10 +220,10 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "change_summary",
   "changes": {
     "add": 1,
@@ -243,10 +243,10 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "outputs",
   "outputs": {
 	"action": "create",
@@ -270,23 +270,25 @@ func TestMarshal(t *testing.T) {
 			},
 			expect: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "apply_start",
-  "resource": {
-    "addr": "random_pet.animal",
-	"implied_provider": "random",
-	"module": "",
-	"resource": "random_pet.animal",
-	"resource_key": null,
-	"resource_type": "random_pet",
-	"resource_name": "animal"
-  },
-  "action": "create",
-  "id_key": "id",
-  "id_value": "/foo/bar"
+  "hook": {
+	  "resource": {
+		"addr": "random_pet.animal",
+		"implied_provider": "random",
+		"module": "",
+		"resource": "random_pet.animal",
+		"resource_key": null,
+		"resource_type": "random_pet",
+		"resource_name": "animal"
+	  },
+	  "action": "create",
+	  "id_key": "id",
+	  "id_value": "/foo/bar"
+  }
 }
 `,
 		},
@@ -311,10 +313,10 @@ func TestUnmarshal(t *testing.T) {
 			name: "Version Message",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "version",
   "terraform": "1.10.0",
   "ui": "0.1.0"
@@ -331,10 +333,10 @@ func TestUnmarshal(t *testing.T) {
 			name: "Log Message",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "log",
   "k1": "v1"
 }
@@ -348,10 +350,10 @@ func TestUnmarshal(t *testing.T) {
 			name: "Diagnostic Message",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "diagnostic",
   "diagnostic": {
     "address": "foo.bar",
@@ -401,10 +403,10 @@ func TestUnmarshal(t *testing.T) {
 			name: "Planned Change Message",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "planned_change",
   "change": {
 	  "resource": {
@@ -430,10 +432,10 @@ func TestUnmarshal(t *testing.T) {
 			name: "Resource Drift Message",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "resource_drift",
   "change": {
 	  "resource": {
@@ -459,10 +461,10 @@ func TestUnmarshal(t *testing.T) {
 			name: "Change Summary Message",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "change_summary",
   "changes": {
     "add": 1,
@@ -482,10 +484,10 @@ func TestUnmarshal(t *testing.T) {
 			name: "Output Message",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "outputs",
   "outputs": {
 	"action": "create",
@@ -504,23 +506,25 @@ func TestUnmarshal(t *testing.T) {
 			name: "Hook Message (Operation Start)",
 			input: `
 {
-  "level": "info",
-  "message": "base message",
-  "module": "terraform.ui",
-  "time_stamp": "2024-12-09T10:25:00Z",
+  "@level": "info",
+  "@message": "base message",
+  "@module": "terraform.ui",
+  "@timestamp": "2024-12-09T10:25:00Z",
   "type": "apply_start",
-  "resource": {
-    "addr": "random_pet.animal",
-	"implied_provider": "random",
-	"module": "",
-	"resource": "random_pet.animal",
-	"resource_key": null,
-	"resource_type": "random_pet",
-	"resource_name": "animal"
-  },
-  "action": "create",
-  "id_key": "id",
-  "id_value": "/foo/bar"
+  "hook": {
+	  "resource": {
+		"addr": "random_pet.animal",
+		"implied_provider": "random",
+		"module": "",
+		"resource": "random_pet.animal",
+		"resource_key": null,
+		"resource_type": "random_pet",
+		"resource_name": "animal"
+	  },
+	  "action": "create",
+	  "id_key": "id",
+	  "id_value": "/foo/bar"
+  }
 }
 `,
 			msg: views.HookMsg{
