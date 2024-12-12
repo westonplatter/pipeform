@@ -75,21 +75,21 @@ func (m DiagnosticsMsg) BaseMessage() BaseMsg {
 	return m.BaseMsg
 }
 
-type PlannedChangeMsg struct {
-	BaseMsg
-	Change *json.ResourceInstanceChange `json:"change"`
-}
-
-func (m PlannedChangeMsg) BaseMessage() BaseMsg {
-	return m.BaseMsg
-}
-
 type ResourceDriftMsg struct {
 	BaseMsg
 	Change *json.ResourceInstanceChange `json:"change"`
 }
 
 func (m ResourceDriftMsg) BaseMessage() BaseMsg {
+	return m.BaseMsg
+}
+
+type PlannedChangeMsg struct {
+	BaseMsg
+	Change *json.ResourceInstanceChange `json:"change"`
+}
+
+func (m PlannedChangeMsg) BaseMessage() BaseMsg {
 	return m.BaseMsg
 }
 
