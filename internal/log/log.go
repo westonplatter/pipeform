@@ -26,7 +26,7 @@ type Logger struct {
 }
 
 func NewLogger(level Level, path string) (*Logger, error) {
-	if level == "" {
+	if level == "" || path == "" {
 		return &Logger{Logger: hclog.NewNullLogger()}, nil
 	}
 

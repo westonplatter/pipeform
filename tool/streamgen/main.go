@@ -33,8 +33,12 @@ func main() {
 		`{"@level":"info","@message":"Outputs: 1","@module":"terraform.ui","@timestamp":"2021-05-25T13:32:41.869280-04:00","outputs":{"pets":{"sensitive":false,"type":"string","value":"smart-lizard"}},"type":"outputs"}`,
 	}
 
-	for _, input := range inputs {
+	for i, input := range inputs {
 		fmt.Println(input)
-		time.Sleep(time.Second * 1)
+		if i < 4 {
+			time.Sleep(time.Millisecond * 20)
+		} else {
+			time.Sleep(time.Second * 1)
+		}
 	}
 }

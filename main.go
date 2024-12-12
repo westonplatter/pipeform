@@ -79,7 +79,7 @@ func main() {
 			if path := fset.TeePath; path != "" {
 				f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 				if err != nil {
-					return err
+					return fmt.Errorf("open for tee: %v", err)
 				}
 				teeWriter = f
 				defer f.Close()

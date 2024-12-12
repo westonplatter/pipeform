@@ -20,6 +20,13 @@ var (
 	StyleSubtitle = lipgloss.NewStyle().Foreground(ColorCream).Background(ColorSubtleIndigo)
 	StyleInfo     = lipgloss.NewStyle().Foreground(ColorCream).Background(ColorNoColor)
 
+	StyleTableHeader   = lipgloss.NewStyle().Bold(true).Padding(0, 1)
+	StyleTableSelected = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
+	StyleTableCell     = lipgloss.NewStyle().Padding(0, 1)
+	StyleTableBase     = lipgloss.NewStyle().
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("240"))
+
 	StyleQuitMsg  = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#DDDADA", Dark: "#3C3C3C"})
 	StyleErrorMsg = lipgloss.NewStyle().Foreground(ColorRed)
 )
