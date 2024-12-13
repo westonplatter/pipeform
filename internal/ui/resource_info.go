@@ -106,11 +106,16 @@ func (infos ResourceInfos) ToRows(total int) []table.Row {
 			dur = info.EndTime.Sub(info.StartTime).Truncate(time.Second)
 		}
 
+		module := "-"
+		if info.Loc.Module != "" {
+			module = info.Loc.Module
+		}
+
 		row := []string{
 			idx,
 			ResourceStatusEmoji(info.Status),
 			string(info.Loc.Action),
-			info.Loc.Module,
+			module,
 			info.Loc.ResourceAddr,
 			dur.String(),
 		}
