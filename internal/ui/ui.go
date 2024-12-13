@@ -8,6 +8,8 @@ import (
 	"github.com/magodo/pipeform/internal/log"
 	"github.com/muesli/reflow/indent"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
@@ -26,8 +28,6 @@ type versionInfo struct {
 	terraform string
 	ui        string
 }
-
-type secondMsg struct{}
 
 type UIModel struct {
 	logger    *log.Logger
@@ -50,6 +50,9 @@ type UIModel struct {
 
 	doneCnt int
 
+	keymap KeyMap
+
+	help     help.Model
 	spinner  spinner.Model
 	table    table.Model
 	progress progress.Model
@@ -67,6 +70,8 @@ func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
 		reader:     reader,
 		viewState:  ViewStateIdle,
 		applyInfos: ResourceInfos{},
+		keymap:     keymap,
+		help:       help.New(),
 		spinner:    spinner.New(),
 		table:      t,
 		progress:   progress.New(),
@@ -102,10 +107,13 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.logger.Trace("Message received", "type", fmt.Sprintf("%T", msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
+		switch {
+		case key.Matches(msg, m.keymap.Quit):
 			m.logger.Warn("Interrupt key received, quit the program")
 			return m, tea.Quit
+		case key.Matches(msg, m.keymap.Help):
+			m.help.ShowAll = !m.help.ShowAll
+			return m, nil
 		default:
 			table, cmd := m.table.Update(msg)
 			m.table = table
@@ -338,6 +346,8 @@ func (m UIModel) View() string {
 	if m.viewState >= ViewStateApply {
 		s += "\n\n" + m.progress.View()
 	}
+
+	s += "\n\n" + m.help.View(m.keymap)
 
 	return indent.String(s, indentLevel)
 }
