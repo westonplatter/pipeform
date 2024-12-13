@@ -335,7 +335,9 @@ func (m UIModel) View() string {
 
 	s += "\n\n" + StyleTableBase.Render(m.table.View())
 
-	s += "\n\n" + m.progress.View()
+	if m.viewState >= ViewStateApply {
+		s += "\n\n" + m.progress.View()
+	}
 
 	return indent.String(s, indentLevel)
 }
