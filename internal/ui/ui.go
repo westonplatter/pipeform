@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	padding  = 2
+	padding = 2
 )
 
 type versionInfo struct {
@@ -51,11 +51,7 @@ func NewRuntimeModel(logger *log.Logger, reader reader.Reader) runtimeModel {
 		table.WithColumns(TableColumn(30)),
 		table.WithFocused(true),
 	)
-	t.SetStyles(table.Styles{
-		Header:   StyleTableHeader,
-		Selected: StyleTableSelected,
-		Cell:     StyleTableCell,
-	})
+	t.SetStyles(StyleTableFunc())
 
 	model := runtimeModel{
 		logger:        logger,
@@ -97,7 +93,7 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	case tea.WindowSizeMsg:
-		width := msg.Width - padding*2 - 4
+		width := msg.Width - padding*2 - 8
 		height := msg.Height - padding*2 - 20
 
 		m.progress.Width = width
@@ -162,19 +158,19 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case json.OperationStart:
 				res := &ResourceInfo{
 					Loc: ResourceInfoLocator{
-						Module: hooker.Resource.Module,
+						Module:       hooker.Resource.Module,
 						ResourceAddr: hooker.Resource.Addr,
 						Action:       hooker.Action,
 					},
-					Status:        ResourceStatusStart,
-					StartTime:    msg.TimeStamp,
+					Status:    ResourceStatusStart,
+					StartTime: msg.TimeStamp,
 				}
 				m.resourceInfos = append(m.resourceInfos, res)
 			case json.OperationProgress:
 				loc := ResourceInfoLocator{
-						Module: hooker.Resource.Module,
-						ResourceAddr: hooker.Resource.Addr,
-						Action:       hooker.Action,
+					Module:       hooker.Resource.Module,
+					ResourceAddr: hooker.Resource.Addr,
+					Action:       hooker.Action,
 				}
 				status := ResourceStatusProgress
 				update := ResourceInfoUpdate{
@@ -187,13 +183,13 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case json.OperationComplete:
 				loc := ResourceInfoLocator{
-						Module: hooker.Resource.Module,
-						ResourceAddr: hooker.Resource.Addr,
-						Action:       hooker.Action,
+					Module:       hooker.Resource.Module,
+					ResourceAddr: hooker.Resource.Addr,
+					Action:       hooker.Action,
 				}
 				status := ResourceStatusComplete
 				update := ResourceInfoUpdate{
-					Status: &status,
+					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
 				if !m.resourceInfos.Update(loc, update) {
@@ -207,13 +203,13 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case json.OperationErrored:
 				loc := ResourceInfoLocator{
-						Module: hooker.Resource.Module,
-						ResourceAddr: hooker.Resource.Addr,
-						Action:       hooker.Action,
+					Module:       hooker.Resource.Module,
+					ResourceAddr: hooker.Resource.Addr,
+					Action:       hooker.Action,
 				}
 				status := ResourceStatusErrored
 				update := ResourceInfoUpdate{
-					Status: &status,
+					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
 				if !m.resourceInfos.Update(loc, update) {
@@ -251,15 +247,15 @@ func (m runtimeModel) View() string {
 
 	s += "\n\n" + StyleTableBase.Render(m.table.View())
 
-	s+= "\n\n" + m.progress.View()
+	s += "\n\n" + m.progress.View()
 
 	return s
 }
 
 func (m runtimeModel) logoView() string {
-	msg := "Terraform"
+	msg := "pipeform"
 	if m.version != nil {
-		msg += fmt.Sprintf(" %s (%s)", m.version.terraform, m.version.ui)
+		msg += fmt.Sprintf(" (terraform: %s)", m.version.terraform)
 	}
-	return StyleTitle.Render(" "+msg+" ")
+	return StyleTitle.Render(msg)
 }
