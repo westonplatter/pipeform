@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/magodo/pipeform/internal/log"
+	"github.com/muesli/reflow/indent"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -17,7 +18,8 @@ import (
 )
 
 const (
-	padding = 2
+	padding     = 2
+	indentLevel = 2
 )
 
 type versionInfo struct {
@@ -301,18 +303,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m UIModel) View() string {
-	s := "\n" + m.logoView()
-
-	s += "\n\n" + m.stateView()
-
-	s += "\n\n" + StyleTableBase.Render(m.table.View())
-
-	s += "\n\n" + m.progress.View()
-
-	return s
-}
-
 func (m UIModel) logoView() string {
 	msg := "pipeform"
 	if m.version != nil {
@@ -332,4 +322,16 @@ func (m UIModel) stateView() string {
 	}
 
 	return prefix + " " + m.viewState.String()
+}
+
+func (m UIModel) View() string {
+	s := "\n" + m.logoView()
+
+	s += "\n\n" + m.stateView()
+
+	s += "\n\n" + StyleTableBase.Render(m.table.View())
+
+	s += "\n\n" + m.progress.View()
+
+	return indent.String(s, indentLevel)
 }
