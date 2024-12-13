@@ -27,6 +27,8 @@ type versionInfo struct {
 	ui        string
 }
 
+type secondMsg struct{}
+
 type UIModel struct {
 	logger    *log.Logger
 	reader    reader.Reader
@@ -55,7 +57,7 @@ type UIModel struct {
 
 func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
 	t := table.New(
-		table.WithColumns(TableColumn(30)),
+		table.WithColumns(TableColumn(60)),
 		table.WithFocused(true),
 	)
 	t.SetStyles(StyleTableFunc())
@@ -93,7 +95,7 @@ func (m UIModel) nextMessage() tea.Msg {
 }
 
 func (m UIModel) Init() tea.Cmd {
-	return tea.Batch(m.nextMessage, m.spinner.Tick)
+	return tea.Batch(m.nextMessage, m.spinner.Tick, tickCmd())
 }
 
 func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -110,14 +112,16 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	case tea.WindowSizeMsg:
-		width := msg.Width - padding*2 - 8
-		height := msg.Height - padding*2 - 20
 
-		m.progress.Width = width
+		progressWidth := msg.Width - padding*2
+		m.progress.Width = progressWidth
 
-		m.table.SetColumns(TableColumn(width))
-		m.table.SetWidth(width)
-		m.table.SetHeight(height)
+		tableWidth := msg.Width - padding*2 - 10
+		tableHeight := msg.Height - padding*2 - 20
+
+		m.table.SetColumns(TableColumn(tableWidth))
+		m.table.SetWidth(tableWidth)
+		m.table.SetHeight(tableHeight)
 
 		return m, nil
 
@@ -130,7 +134,12 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
+
 		return m, cmd
+
+	case tickMsg:
+		m.setTableRows()
+		return m, tickCmd()
 
 	// Log the receiver error message
 	case receiverErrorMsg:
@@ -194,6 +203,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					StartTime: msg.TimeStamp,
 				}
 				m.refreshInfos = append(m.refreshInfos, res)
+
 			case json.RefreshComplete:
 				loc := ResourceInfoLocator{
 					Module:       hook.Resource.Module,
@@ -209,6 +219,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.logger.Error("RefreshComplete hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", "refresh")
 					break
 				}
+
 			case json.OperationStart:
 				res := &ResourceInfo{
 					Loc: ResourceInfoLocator{
@@ -220,20 +231,9 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					StartTime: msg.TimeStamp,
 				}
 				m.applyInfos = append(m.applyInfos, res)
+
 			case json.OperationProgress:
-				loc := ResourceInfoLocator{
-					Module:       hook.Resource.Module,
-					ResourceAddr: hook.Resource.Addr,
-					Action:       string(hook.Action),
-				}
-				status := ResourceStatusProgress
-				update := ResourceInfoUpdate{
-					Status: &status,
-				}
-				if !m.applyInfos.Update(loc, update) {
-					m.logger.Error("OperationProgress hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", hook.Action)
-					break
-				}
+				// Ignore
 
 			case json.OperationComplete:
 				loc := ResourceInfoLocator{
@@ -288,18 +288,22 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update viewState
 		m.viewState, _ = m.viewState.NextState(msg.msg)
 
-		// Update table rows
-		switch m.viewState {
-		case ViewStateRefresh:
-			m.table.SetRows(m.refreshInfos.ToRows(0))
-		case ViewStateApply:
-			m.table.SetRows(m.applyInfos.ToRows(m.totalCnt))
-		}
+		m.setTableRows()
 
 		return m, tea.Batch(cmds...)
 
 	default:
 		return m, nil
+	}
+}
+
+// setTableRows on a one second pace.
+func (m *UIModel) setTableRows() {
+	switch m.viewState {
+	case ViewStateRefresh:
+		m.table.SetRows(m.refreshInfos.ToRows(0))
+	case ViewStateApply:
+		m.table.SetRows(m.applyInfos.ToRows(m.totalCnt))
 	}
 }
 

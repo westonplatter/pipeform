@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"math/rand"
 	"strconv"
 	"time"
 
@@ -15,8 +14,6 @@ type ResourceStatus string
 const (
 	// Once received one OperationStart hook message
 	ResourceStatusStart ResourceStatus = "start"
-	// Once received one or more OperationProgress hook message
-	ResourceStatusProgress ResourceStatus = "progress"
 	// Once received one OperationComplete hook message
 	ResourceStatusComplete ResourceStatus = "complete"
 	// Once received one OperationErrored hook message
@@ -30,9 +27,6 @@ func ResourceStatusEmoji(status ResourceStatus) string {
 	switch status {
 	case ResourceStatusStart:
 		return "🕛"
-	case ResourceStatusProgress:
-		states := []string{"🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚"}
-		return states[rand.Intn(len(states))]
 	case ResourceStatusComplete:
 		return "✅"
 	case ResourceStatusErrored:
@@ -97,18 +91,28 @@ func (infos ResourceInfos) AddDiags(loc ResourceInfoLocator, diags ...json.Diagn
 // ToRows turns the ResourceInfos into table rows.
 // The total is used to decorate the index as a fraction, if total > 0.
 func (infos ResourceInfos) ToRows(total int) []table.Row {
+	t := time.Now()
 	var rows []table.Row
 	for i, info := range infos {
 		idx := strconv.Itoa(i + 1)
 		if total > 0 {
 			idx = fmt.Sprintf("%d/%d", i+1, total)
 		}
+
+		var dur time.Duration
+		if info.EndTime.Equal(time.Time{}) {
+			dur = t.Sub(info.StartTime).Truncate(time.Second)
+		} else {
+			dur = info.EndTime.Sub(info.StartTime).Truncate(time.Second)
+		}
+
 		row := []string{
 			idx,
 			ResourceStatusEmoji(info.Status),
 			string(info.Loc.Action),
 			info.Loc.Module,
 			info.Loc.ResourceAddr,
+			dur.String(),
 		}
 		rows = append(rows, row)
 	}
