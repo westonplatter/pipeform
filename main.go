@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -87,8 +88,17 @@ func main() {
 
 			reader := reader.NewReader(os.Stdin, teeWriter)
 			m := ui.NewRuntimeModel(logger, reader)
-			if _, err := tea.NewProgram(m, tea.WithInputTTY()).Run(); err != nil {
+			tm, err := tea.NewProgram(m, tea.WithInputTTY(), tea.WithAltScreen()).Run()
+			if err != nil {
 				return fmt.Errorf("Error running program: %v\n", err)
+			}
+
+			if diags := tm.(ui.UIModel).Diags(); len(diags.Errs) != 0 {
+				for _, diag := range diags.Errs {
+					if b, err := json.MarshalIndent(diag, "", "  "); err == nil {
+						fmt.Println(string(b))
+					}
+				}
 			}
 			return nil
 		},
@@ -98,5 +108,4 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
 }

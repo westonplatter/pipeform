@@ -113,7 +113,7 @@ func (m OutputMsg) BaseMessage() BaseMsg {
 
 type HookMsg struct {
 	BaseMsg
-	json.Hooker `json:"hook"`
+	json.Hook `json:"hook"`
 }
 
 func (m HookMsg) BaseMessage() BaseMsg {
@@ -207,7 +207,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.OperationStart,
+			Hook:    temp.OperationStart,
 		}, nil
 
 	case json.MessageApplyProgress, json.MessageEphemeralOpProgress:
@@ -221,7 +221,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.OperationProgress,
+			Hook:    temp.OperationProgress,
 		}, nil
 
 	case json.MessageApplyComplete, json.MessageEphemeralOpComplete:
@@ -235,7 +235,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.OperationComplete,
+			Hook:    temp.OperationComplete,
 		}, nil
 
 	case json.MessageApplyErrored, json.MessageEphemeralOpErrored:
@@ -249,7 +249,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.OperationErrored,
+			Hook:    temp.OperationErrored,
 		}, nil
 
 	case json.MessageProvisionStart:
@@ -263,7 +263,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.ProvisionStart,
+			Hook:    temp.ProvisionStart,
 		}, nil
 
 	case json.MessageProvisionProgress:
@@ -277,7 +277,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.ProvisionProgress,
+			Hook:    temp.ProvisionProgress,
 		}, nil
 
 	case json.MessageProvisionComplete:
@@ -291,7 +291,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.ProvisionComplete,
+			Hook:    temp.ProvisionComplete,
 		}, nil
 
 	case json.MessageProvisionErrored:
@@ -305,7 +305,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.ProvisionErrored,
+			Hook:    temp.ProvisionErrored,
 		}, nil
 
 	case json.MessageRefreshStart:
@@ -319,7 +319,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.RefreshStart,
+			Hook:    temp.RefreshStart,
 		}, nil
 
 	case json.MessageRefreshComplete:
@@ -333,7 +333,7 @@ func UnmarshalMessage(b []byte) (Message, error) {
 
 		return HookMsg{
 			BaseMsg: temp.BaseMsg,
-			Hooker:  temp.RefreshComplete,
+			Hook:    temp.RefreshComplete,
 		}, nil
 
 	default:

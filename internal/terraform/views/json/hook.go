@@ -1,19 +1,19 @@
 package json
 
-type Hooker interface {
-	isHooker()
+type Hook interface {
+	isHook()
 }
 
-type hooker struct{}
+type hook struct{}
 
-func (hooker) isHooker() {}
+func (hook) isHook() {}
 
 // OperationStart: triggered by Pre{Apply,EphemeralOp} hook
 // msgType can be:
 // - MessageApplyStart
 // - MessageEphemeralOpStart
 type OperationStart struct {
-	hooker
+	hook
 
 	Resource ResourceAddr `json:"resource"`
 	Action   ChangeAction `json:"action"`
@@ -27,7 +27,7 @@ type OperationStart struct {
 // - MessageApplyProgress
 // - MessageEphemeralOpProgress
 type OperationProgress struct {
-	hooker
+	hook
 
 	Resource ResourceAddr `json:"resource"`
 	Action   ChangeAction `json:"action"`
@@ -39,7 +39,7 @@ type OperationProgress struct {
 // - MessageApplyComplete
 // - MessageEphemeralOpComplete
 type OperationComplete struct {
-	hooker
+	hook
 
 	Resource ResourceAddr `json:"resource"`
 	Action   ChangeAction `json:"action"`
@@ -54,7 +54,7 @@ type OperationComplete struct {
 // - MessageApplyErrored
 // - MessageEphemeralOpErrored
 type OperationErrored struct {
-	hooker
+	hook
 
 	Resource ResourceAddr `json:"resource"`
 	Action   ChangeAction `json:"action"`
@@ -65,7 +65,7 @@ type OperationErrored struct {
 // msgType can be:
 // - MessageProvisionStart
 type ProvisionStart struct {
-	hooker
+	hook
 
 	Resource    ResourceAddr `json:"resource"`
 	Provisioner string       `json:"provisioner"`
@@ -75,7 +75,7 @@ type ProvisionStart struct {
 // msgType can be:
 // - MessageProvisionProgress
 type ProvisionProgress struct {
-	hooker
+	hook
 
 	Resource    ResourceAddr `json:"resource"`
 	Provisioner string       `json:"provisioner"`
@@ -86,7 +86,7 @@ type ProvisionProgress struct {
 // msgType can be:
 // - MessageProvisionComplete
 type ProvisionComplete struct {
-	hooker
+	hook
 
 	Resource    ResourceAddr `json:"resource"`
 	Provisioner string       `json:"provisioner"`
@@ -97,7 +97,7 @@ type ProvisionComplete struct {
 // msgType can be:
 // - MessageProvisionErrored
 type ProvisionErrored struct {
-	hooker
+	hook
 
 	Resource    ResourceAddr `json:"resource"`
 	Provisioner string       `json:"provisioner"`
@@ -107,7 +107,7 @@ type ProvisionErrored struct {
 // msgType can be:
 // - MessageRefreshStart
 type RefreshStart struct {
-	hooker
+	hook
 
 	Resource ResourceAddr `json:"resource"`
 	IDKey    string       `json:"id_key,omitempty"`
@@ -118,7 +118,7 @@ type RefreshStart struct {
 // msgType can be:
 // - MessageRefreshComplete
 type RefreshComplete struct {
-	hooker
+	hook
 
 	Resource ResourceAddr `json:"resource"`
 	IDKey    string       `json:"id_key,omitempty"`

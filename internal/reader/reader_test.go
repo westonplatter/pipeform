@@ -86,7 +86,7 @@ func TestReader(t *testing.T) {
 				Module:    "terraform.ui",
 				TimeStamp: mustUnmarshalTime(t, `"2021-05-25T13:32:41.825308-04:00"`),
 			},
-			Hooker: vjson.OperationStart{
+			Hook: vjson.OperationStart{
 				Resource: vjson.ResourceAddr{
 					Addr:            "random_pet.animal",
 					Module:          "",
@@ -107,7 +107,7 @@ func TestReader(t *testing.T) {
 				Module:    "terraform.ui",
 				TimeStamp: mustUnmarshalTime(t, `"2021-05-25T13:32:41.826179-04:00"`),
 			},
-			Hooker: vjson.OperationComplete{
+			Hook: vjson.OperationComplete{
 				Resource: vjson.ResourceAddr{
 					Addr:            "random_pet.animal",
 					Module:          "",

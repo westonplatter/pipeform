@@ -3,10 +3,12 @@ package ui
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/magodo/pipeform/internal/log"
 
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/magodo/pipeform/internal/reader"
@@ -23,16 +25,17 @@ type versionInfo struct {
 	ui        string
 }
 
-type runtimeModel struct {
+type UIModel struct {
 	logger    *log.Logger
 	reader    reader.Reader
 	teeWriter io.Writer
 
-	resourceInfos ResourceInfos
+	viewState ViewState
+	isEOF     bool
 
-	// diags represent non-resource, non-provision diagnostics (as they are collected in the *Info)
-	// E.g. this can be the provider diagnostic.
-	diags []json.Diagnostic
+	diags Diags
+
+	resourceInfos ResourceInfos
 
 	version *versionInfo
 
@@ -42,21 +45,24 @@ type runtimeModel struct {
 
 	doneCnt int
 
+	spinner  spinner.Model
 	table    table.Model
 	progress progress.Model
 }
 
-func NewRuntimeModel(logger *log.Logger, reader reader.Reader) runtimeModel {
+func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
 	t := table.New(
 		table.WithColumns(TableColumn(30)),
 		table.WithFocused(true),
 	)
 	t.SetStyles(StyleTableFunc())
 
-	model := runtimeModel{
+	model := UIModel{
 		logger:        logger,
 		reader:        reader,
+		viewState:     ViewStateIdle,
 		resourceInfos: ResourceInfos{},
+		spinner:       spinner.New(),
 		table:         t,
 		progress:      progress.New(),
 	}
@@ -64,7 +70,11 @@ func NewRuntimeModel(logger *log.Logger, reader reader.Reader) runtimeModel {
 	return model
 }
 
-func (m runtimeModel) nextMessage() tea.Msg {
+func (m UIModel) Diags() Diags {
+	return m.diags
+}
+
+func (m UIModel) nextMessage() tea.Msg {
 	msg, err := m.reader.Next()
 	if err != nil {
 		if err == io.EOF {
@@ -75,11 +85,11 @@ func (m runtimeModel) nextMessage() tea.Msg {
 	return receiverMsg{msg: msg}
 }
 
-func (m runtimeModel) Init() tea.Cmd {
-	return m.nextMessage
+func (m UIModel) Init() tea.Cmd {
+	return tea.Batch(m.nextMessage, m.spinner.Tick)
 }
 
-func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.logger.Trace("Message received", "type", fmt.Sprintf("%T", msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -110,6 +120,11 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.progress = progressModel.(progress.Model)
 		return m, cmd
 
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+
 	// Log the receiver error message
 	case receiverErrorMsg:
 		m.logger.Error("Receiver error", "error", msg.Error())
@@ -117,6 +132,7 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case receiverEOFMsg:
 		m.logger.Info("Receiver reaches EOF")
+		m.isEOF = true
 		return m, nil
 
 	case receiverMsg:
@@ -135,7 +151,12 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// There's no much useful information for now.
 		case views.DiagnosticsMsg:
 			// TODO: Link resource related diag to the resource info
-			m.diags = append(m.diags, *msg.Diagnostic)
+			switch strings.ToLower(msg.Level) {
+			case "warn":
+				m.diags.Warns = append(m.diags.Warns, *msg.Diagnostic)
+			case "error":
+				m.diags.Errs = append(m.diags.Errs, *msg.Diagnostic)
+			}
 
 		case views.ResourceDriftMsg:
 			// There's no much useful information for now.
@@ -153,8 +174,8 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// TODO: How to show output?
 
 		case views.HookMsg:
-			m.logger.Debug("Hook message", "type", fmt.Sprintf("%T", msg.Hooker))
-			switch hooker := msg.Hooker.(type) {
+			m.logger.Debug("Hook message", "type", fmt.Sprintf("%T", msg.Hook))
+			switch hooker := msg.Hook.(type) {
 			case json.OperationStart:
 				res := &ResourceInfo{
 					Loc: ResourceInfoLocator{
@@ -198,8 +219,8 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				m.doneCnt += 1
-
-				cmds = append(cmds, m.progress.SetPercent(float64(m.doneCnt)/float64(m.totalCnt)))
+				percentage := float64(m.doneCnt) / float64(m.totalCnt)
+				cmds = append(cmds, m.progress.SetPercent(percentage))
 
 			case json.OperationErrored:
 				loc := ResourceInfoLocator{
@@ -218,8 +239,8 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				m.doneCnt += 1
-
-				cmds = append(cmds, m.progress.SetPercent(float64(m.doneCnt)/float64(m.totalCnt)))
+				percentage := float64(m.doneCnt) / float64(m.totalCnt)
+				cmds = append(cmds, m.progress.SetPercent(percentage))
 
 			case json.ProvisionStart:
 			case json.ProvisionProgress:
@@ -233,6 +254,10 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			panic(fmt.Sprintf("unknown message type: %T", msg))
 		}
 
+		// Update viewState
+		m.viewState = m.viewState.NextState(msg.msg)
+
+		// Update table rows
 		m.table.SetRows(m.resourceInfos.ToRows(m.totalCnt))
 
 		return m, tea.Batch(cmds...)
@@ -242,8 +267,10 @@ func (m runtimeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m runtimeModel) View() string {
+func (m UIModel) View() string {
 	s := "\n" + m.logoView()
+
+	s += "\n\n" + m.stateView()
 
 	s += "\n\n" + StyleTableBase.Render(m.table.View())
 
@@ -252,10 +279,23 @@ func (m runtimeModel) View() string {
 	return s
 }
 
-func (m runtimeModel) logoView() string {
+func (m UIModel) logoView() string {
 	msg := "pipeform"
 	if m.version != nil {
 		msg += fmt.Sprintf(" (terraform: %s)", m.version.terraform)
 	}
-	return StyleTitle.Render(msg)
+	return StyleTitle.Render(" " + msg + " ")
+}
+
+func (m UIModel) stateView() string {
+	prefix := m.spinner.View()
+	if m.isEOF {
+		if len(m.diags.Errs) == 0 {
+			prefix = "✅"
+		} else {
+			prefix = "❌"
+		}
+	}
+
+	return prefix + " " + m.viewState.String()
 }

@@ -261,7 +261,7 @@ func TestMarshal(t *testing.T) {
 			name: "Hook Message (Operation Start)",
 			msg: views.HookMsg{
 				BaseMsg: newBaseMsg(json.MessageApplyStart),
-				Hooker: json.OperationStart{
+				Hook: json.OperationStart{
 					Resource: resourceAddr,
 					Action:   json.ActionCreate,
 					IDKey:    "id",
@@ -529,7 +529,7 @@ func TestUnmarshal(t *testing.T) {
 `,
 			msg: views.HookMsg{
 				BaseMsg: newBaseMsg(json.MessageApplyStart),
-				Hooker: json.OperationStart{
+				Hook: json.OperationStart{
 					Resource: resourceAddr,
 					Action:   json.ActionCreate,
 					IDKey:    "id",
