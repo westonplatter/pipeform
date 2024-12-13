@@ -35,7 +35,8 @@ type UIModel struct {
 
 	diags Diags
 
-	resourceInfos ResourceInfos
+	refreshInfos ResourceInfos
+	applyInfos   ResourceInfos
 
 	version *versionInfo
 
@@ -58,13 +59,13 @@ func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
 	t.SetStyles(StyleTableFunc())
 
 	model := UIModel{
-		logger:        logger,
-		reader:        reader,
-		viewState:     ViewStateIdle,
-		resourceInfos: ResourceInfos{},
-		spinner:       spinner.New(),
-		table:         t,
-		progress:      progress.New(),
+		logger:     logger,
+		reader:     reader,
+		viewState:  ViewStateIdle,
+		applyInfos: ResourceInfos{},
+		spinner:    spinner.New(),
+		table:      t,
+		progress:   progress.New(),
 	}
 
 	return model
@@ -72,6 +73,10 @@ func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
 
 func (m UIModel) Diags() Diags {
 	return m.diags
+}
+
+func (m UIModel) IsEOF() bool {
+	return m.isEOF
 }
 
 func (m UIModel) nextMessage() tea.Msg {
@@ -175,46 +180,72 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case views.HookMsg:
 			m.logger.Debug("Hook message", "type", fmt.Sprintf("%T", msg.Hook))
-			switch hooker := msg.Hook.(type) {
-			case json.OperationStart:
+			switch hook := msg.Hook.(type) {
+			case json.RefreshStart:
 				res := &ResourceInfo{
 					Loc: ResourceInfoLocator{
-						Module:       hooker.Resource.Module,
-						ResourceAddr: hooker.Resource.Addr,
-						Action:       hooker.Action,
+						Module:       hook.Resource.Module,
+						ResourceAddr: hook.Resource.Addr,
+						Action:       "refresh",
 					},
 					Status:    ResourceStatusStart,
 					StartTime: msg.TimeStamp,
 				}
-				m.resourceInfos = append(m.resourceInfos, res)
-			case json.OperationProgress:
+				m.refreshInfos = append(m.refreshInfos, res)
+			case json.RefreshComplete:
 				loc := ResourceInfoLocator{
-					Module:       hooker.Resource.Module,
-					ResourceAddr: hooker.Resource.Addr,
-					Action:       hooker.Action,
-				}
-				status := ResourceStatusProgress
-				update := ResourceInfoUpdate{
-					Status: &status,
-				}
-				if !m.resourceInfos.Update(loc, update) {
-					m.logger.Error("OperationProgress hooker can't find the resource info", "module", hooker.Resource.Module, "addr", hooker.Resource.Addr, "action", hooker.Action)
-					break
-				}
-
-			case json.OperationComplete:
-				loc := ResourceInfoLocator{
-					Module:       hooker.Resource.Module,
-					ResourceAddr: hooker.Resource.Addr,
-					Action:       hooker.Action,
+					Module:       hook.Resource.Module,
+					ResourceAddr: hook.Resource.Addr,
+					Action:       "refresh",
 				}
 				status := ResourceStatusComplete
 				update := ResourceInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
-				if !m.resourceInfos.Update(loc, update) {
-					m.logger.Error("OperationComplete hooker can't find the resource info", "module", hooker.Resource.Module, "addr", hooker.Resource.Addr, "action", hooker.Action)
+				if !m.refreshInfos.Update(loc, update) {
+					m.logger.Error("RefreshComplete hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", "refresh")
+					break
+				}
+			case json.OperationStart:
+				res := &ResourceInfo{
+					Loc: ResourceInfoLocator{
+						Module:       hook.Resource.Module,
+						ResourceAddr: hook.Resource.Addr,
+						Action:       string(hook.Action),
+					},
+					Status:    ResourceStatusStart,
+					StartTime: msg.TimeStamp,
+				}
+				m.applyInfos = append(m.applyInfos, res)
+			case json.OperationProgress:
+				loc := ResourceInfoLocator{
+					Module:       hook.Resource.Module,
+					ResourceAddr: hook.Resource.Addr,
+					Action:       string(hook.Action),
+				}
+				status := ResourceStatusProgress
+				update := ResourceInfoUpdate{
+					Status: &status,
+				}
+				if !m.applyInfos.Update(loc, update) {
+					m.logger.Error("OperationProgress hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", hook.Action)
+					break
+				}
+
+			case json.OperationComplete:
+				loc := ResourceInfoLocator{
+					Module:       hook.Resource.Module,
+					ResourceAddr: hook.Resource.Addr,
+					Action:       string(hook.Action),
+				}
+				status := ResourceStatusComplete
+				update := ResourceInfoUpdate{
+					Status:  &status,
+					Endtime: &msg.TimeStamp,
+				}
+				if !m.applyInfos.Update(loc, update) {
+					m.logger.Error("OperationComplete hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", hook.Action)
 					break
 				}
 
@@ -224,17 +255,17 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case json.OperationErrored:
 				loc := ResourceInfoLocator{
-					Module:       hooker.Resource.Module,
-					ResourceAddr: hooker.Resource.Addr,
-					Action:       hooker.Action,
+					Module:       hook.Resource.Module,
+					ResourceAddr: hook.Resource.Addr,
+					Action:       string(hook.Action),
 				}
 				status := ResourceStatusErrored
 				update := ResourceInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
-				if !m.resourceInfos.Update(loc, update) {
-					m.logger.Error("OperationErrored hooker can't find the resource info", "module", hooker.Resource.Module, "addr", hooker.Resource.Addr, "action", hooker.Action)
+				if !m.applyInfos.Update(loc, update) {
+					m.logger.Error("OperationErrored hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", hook.Action)
 					break
 				}
 
@@ -246,8 +277,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case json.ProvisionProgress:
 			case json.ProvisionComplete:
 			case json.ProvisionErrored:
-			case json.RefreshStart:
-			case json.RefreshComplete:
 			default:
 			}
 		default:
@@ -255,10 +284,15 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Update viewState
-		m.viewState = m.viewState.NextState(msg.msg)
+		m.viewState, _ = m.viewState.NextState(msg.msg)
 
 		// Update table rows
-		m.table.SetRows(m.resourceInfos.ToRows(m.totalCnt))
+		switch m.viewState {
+		case ViewStateRefresh:
+			m.table.SetRows(m.refreshInfos.ToRows(0))
+		case ViewStateApply:
+			m.table.SetRows(m.applyInfos.ToRows(m.totalCnt))
+		}
 
 		return m, tea.Batch(cmds...)
 

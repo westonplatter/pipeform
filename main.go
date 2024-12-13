@@ -93,10 +93,17 @@ func main() {
 				return fmt.Errorf("Error running program: %v\n", err)
 			}
 
-			if diags := tm.(ui.UIModel).Diags(); len(diags.Errs) != 0 {
+			m = tm.(ui.UIModel)
+
+			if !m.IsEOF() {
+				fmt.Fprintln(os.Stderr, "Interrupted")
+				os.Exit(1)
+			}
+
+			if diags := m.Diags(); len(diags.Errs) != 0 {
 				for _, diag := range diags.Errs {
 					if b, err := json.MarshalIndent(diag, "", "  "); err == nil {
-						fmt.Println(string(b))
+						fmt.Fprintln(os.Stderr, string(b))
 					}
 				}
 			}

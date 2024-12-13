@@ -33,54 +33,50 @@ func (s ViewState) String() string {
 	}
 }
 
-func (s ViewState) NextState(msg views.Message) ViewState {
+func (s ViewState) NextState(msg views.Message) (ViewState, bool) {
 	switch s {
 	case ViewStateIdle:
 		switch msg.BaseMessage().Type {
 		case json.MessageRefreshStart:
-			return ViewStateRefresh
+			return ViewStateRefresh, true
 		case json.MessagePlannedChange:
-			return ViewStatePlan
+			return ViewStatePlan, true
 		case json.MessageApplyStart:
-			return ViewStateApply
+			return ViewStateApply, true
 		case json.MessageChangeSummary:
 			// There are two change summary messages, one after change, one after apply.
 			// We only handle the one after apply, as the one after change is less interesting to show.
 			if msg.(views.ChangeSummaryMsg).Changes.Operation == json.OperationApplied {
-				return ViewStateSummary
+				return ViewStateSummary, true
 			}
 		}
-		return ViewStateIdle
 
 	case ViewStateRefresh:
 		switch msg.BaseMessage().Type {
 		case json.MessagePlannedChange:
-			return ViewStatePlan
+			return ViewStatePlan, true
 		case json.MessageChangeSummary:
 			if msg.(views.ChangeSummaryMsg).Changes.Operation == json.OperationApplied {
-				return ViewStateSummary
+				return ViewStateSummary, true
 			}
 		}
-		return ViewStateRefresh
+
 	case ViewStatePlan:
 		switch msg.BaseMessage().Type {
 		case json.MessageApplyStart:
-			return ViewStateApply
+			return ViewStateApply, true
 		case json.MessageChangeSummary:
 			if msg.(views.ChangeSummaryMsg).Changes.Operation == json.OperationApplied {
-				return ViewStateSummary
+				return ViewStateSummary, true
 			}
 		}
-		return ViewStatePlan
+
 	case ViewStateApply:
 		switch msg.BaseMessage().Type {
 		case json.MessageChangeSummary:
-			return ViewStateSummary
+			return ViewStateSummary, true
 		}
-		return ViewStateApply
-	case ViewStateSummary:
-		return ViewStateSummary
-	default:
-		return ViewStateUnknown
 	}
+
+	return s, false
 }

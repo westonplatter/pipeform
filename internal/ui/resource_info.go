@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -44,7 +45,7 @@ func ResourceStatusEmoji(status ResourceStatus) string {
 type ResourceInfoLocator struct {
 	Module       string
 	ResourceAddr string
-	Action       json.ChangeAction
+	Action       string
 }
 
 type ResourceInfo struct {
@@ -93,11 +94,17 @@ func (infos ResourceInfos) AddDiags(loc ResourceInfoLocator, diags ...json.Diagn
 	return false
 }
 
+// ToRows turns the ResourceInfos into table rows.
+// The total is used to decorate the index as a fraction, if total > 0.
 func (infos ResourceInfos) ToRows(total int) []table.Row {
 	var rows []table.Row
 	for i, info := range infos {
+		idx := strconv.Itoa(i + 1)
+		if total > 0 {
+			idx = fmt.Sprintf("%d/%d", i+1, total)
+		}
 		row := []string{
-			fmt.Sprintf("%d/%d", i+1, total),
+			idx,
 			ResourceStatusEmoji(info.Status),
 			string(info.Loc.Action),
 			info.Loc.Module,
