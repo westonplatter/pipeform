@@ -52,7 +52,7 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:        "tee",
-				Usage:       "Equivalent to `terraform ... -json | tee <value> | pipeform`",
+				Usage:       `Equivalent to "terraform ... -json | tee <value> | pipeform"`,
 				Sources:     cli.EnvVars("PF_TEE"),
 				Destination: &fset.TeePath,
 			},
