@@ -42,11 +42,13 @@ var changeSummary = json.ChangeSummary{
 	Operation: json.OperationApplied,
 }
 
-var output = json.Output{
-	Sensitive: true,
-	Type:      []byte("123"),
-	Value:     []byte("321"),
-	Action:    json.ActionCreate,
+var outputs = json.Outputs{
+	"foo": {
+		Sensitive: true,
+		Type:      []byte("123"),
+		Value:     []byte("321"),
+		Action:    json.ActionCreate,
+	},
 }
 
 func newBaseMsg(typ json.MessageType) views.BaseMsg {
@@ -239,7 +241,7 @@ func TestMarshal(t *testing.T) {
 			name: "Output Message",
 			msg: views.OutputMsg{
 				BaseMsg: newBaseMsg(json.MessageOutputs),
-				Outputs: &output,
+				Outputs: outputs,
 			},
 			expect: `
 {
@@ -249,10 +251,12 @@ func TestMarshal(t *testing.T) {
   "@timestamp": "2024-12-09T10:25:00Z",
   "type": "outputs",
   "outputs": {
-	"action": "create",
-	"sensitive": true,
-	"type": 123,
-	"value": 321
+    "foo": {
+		"action": "create",
+		"sensitive": true,
+		"type": 123,
+		"value": 321
+	}
   }
 }
 `,
@@ -490,16 +494,18 @@ func TestUnmarshal(t *testing.T) {
   "@timestamp": "2024-12-09T10:25:00Z",
   "type": "outputs",
   "outputs": {
-	"action": "create",
-	"sensitive": true,
-	"type": 123,
-	"value": 321
+    "foo": {
+		"action": "create",
+		"sensitive": true,
+		"type": 123,
+		"value": 321
+	}
   }
 }
 `,
 			msg: views.OutputMsg{
 				BaseMsg: newBaseMsg(json.MessageOutputs),
-				Outputs: &output,
+				Outputs: outputs,
 			},
 		},
 		{

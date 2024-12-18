@@ -160,7 +160,7 @@ func TestReader(t *testing.T) {
 		buf.WriteString("\n")
 		require.NoError(t, err)
 	}
-	reader := reader.NewReader(buf)
+	reader := reader.NewReader(buf, io.Discard)
 
 	for i := 0; i < len(inputs); i++ {
 		msg, err := reader.Next()
