@@ -15,13 +15,14 @@ var (
 	ColorGreen        = lipgloss.AdaptiveColor{Dark: "#04B575", Light: "#04B575"}
 	ColorRed          = lipgloss.AdaptiveColor{Dark: "#ED567A", Light: "#FF4672"}
 	ColorFaintRed     = lipgloss.AdaptiveColor{Dark: "#C74665", Light: "#FF6F91"}
+	ColorGrey         = lipgloss.AdaptiveColor{Light: "#B2B2B2", Dark: "#4A4A4A"}
 	ColorNoColor      = lipgloss.AdaptiveColor{Dark: "", Light: ""}
 )
 
 var (
 	StyleTitle    = lipgloss.NewStyle().Foreground(ColorCream).Background(ColorIndigo)
 	StyleSubtitle = lipgloss.NewStyle().Foreground(ColorCream).Background(ColorSubtleIndigo)
-	StyleInfo     = lipgloss.NewStyle().Foreground(ColorCream).Background(ColorNoColor)
+	StyleComment  = lipgloss.NewStyle().Foreground(ColorGrey)
 
 	StyleTableFunc = func() table.Styles {
 		s := table.DefaultStyles()

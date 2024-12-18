@@ -19,17 +19,17 @@ const (
 func (s ViewState) String() string {
 	switch s {
 	case ViewStateIdle:
-		return "idle"
+		return "IDLE"
 	case ViewStateRefresh:
-		return "refresh"
+		return "REFRESH"
 	case ViewStatePlan:
-		return "plan"
+		return "PLAN"
 	case ViewStateApply:
-		return "apply"
+		return "APPLY"
 	case ViewStateSummary:
-		return "summary"
+		return "SUMMARY"
 	default:
-		return "unknown"
+		return "UNKNOWN"
 	}
 }
 

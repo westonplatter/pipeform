@@ -35,7 +35,9 @@ type UIModel struct {
 	teeWriter io.Writer
 
 	viewState ViewState
-	isEOF     bool
+	lastLog   string
+
+	isEOF bool
 
 	diags Diags
 
@@ -157,12 +159,15 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case receiverEOFMsg:
 		m.logger.Info("Receiver reaches EOF")
 		m.isEOF = true
+		m.lastLog = ""
 		return m, nil
 
 	case receiverMsg:
 		m.logger.Debug("Message receiverMsg received", "type", fmt.Sprintf("%T", msg.msg))
 
 		cmds := []tea.Cmd{m.nextMessage}
+
+		m.lastLog = msg.msg.BaseMessage().Message
 
 		switch msg := msg.msg.(type) {
 		case views.VersionMsg:
@@ -333,7 +338,7 @@ func (m UIModel) stateView() string {
 		}
 	}
 
-	return prefix + " " + m.viewState.String()
+	return prefix + " " + StyleSubtitle.Render(m.viewState.String()) + " " + StyleComment.Render(m.lastLog)
 }
 
 func (m UIModel) View() string {
