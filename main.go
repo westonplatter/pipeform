@@ -96,17 +96,13 @@ func main() {
 			m = tm.(ui.UIModel)
 
 			if !m.IsEOF() {
-				fmt.Fprintln(os.Stderr, "Interrupted")
+				fmt.Fprintln(os.Stderr, "Interrupted!")
+				printDiagErrs(m)
 				os.Exit(1)
 			}
 
-			if diags := m.Diags(); len(diags.Errs) != 0 {
-				for _, diag := range diags.Errs {
-					if b, err := json.MarshalIndent(diag, "", "  "); err == nil {
-						fmt.Fprintln(os.Stderr, string(b))
-					}
-				}
-			}
+			printDiagErrs(m)
+
 			return nil
 		},
 	}
@@ -114,5 +110,15 @@ func main() {
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+func printDiagErrs(m ui.UIModel) {
+	if diags := m.Diags(); len(diags.Errs) != 0 {
+		for _, diag := range diags.Errs {
+			if b, err := json.MarshalIndent(diag, "", "  "); err == nil {
+				fmt.Fprintln(os.Stderr, string(b))
+			}
+		}
 	}
 }
