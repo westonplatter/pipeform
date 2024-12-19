@@ -127,7 +127,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.progress.Width = progressWidth
 
 		tableWidth := msg.Width - padding*2 - 10
-		tableHeight := msg.Height - padding*2 - 20
+		tableHeight := msg.Height - padding*2 - 10
 
 		m.table.SetColumns(TableColumn(tableWidth))
 		m.table.SetWidth(tableWidth)
@@ -338,7 +338,13 @@ func (m UIModel) stateView() string {
 		}
 	}
 
-	return prefix + " " + StyleSubtitle.Render(m.viewState.String()) + " " + StyleComment.Render(m.lastLog)
+	s := prefix + " " + StyleSubtitle.Render(m.viewState.String())
+
+	if m.lastLog != "" {
+		s += "  " + StyleComment.Render(m.lastLog)
+	}
+
+	return s
 }
 
 func (m UIModel) View() string {
