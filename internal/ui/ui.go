@@ -58,6 +58,8 @@ type UIModel struct {
 	spinner  spinner.Model
 	table    table.Model
 	progress progress.Model
+
+	followed bool
 }
 
 func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
@@ -115,6 +117,9 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case key.Matches(msg, m.keymap.Help):
 			m.help.ShowAll = !m.help.ShowAll
+			return m, nil
+		case key.Matches(msg, m.keymap.Follow):
+			m.followed = !m.followed
 			return m, nil
 		default:
 			table, cmd := m.table.Update(msg)
@@ -318,6 +323,10 @@ func (m *UIModel) setTableRows() {
 	case ViewStateApply:
 		m.table.SetRows(m.applyInfos.ToRows(m.totalCnt))
 	}
+
+	if m.followed {
+		m.table.GotoBottom()
+	}
 }
 
 func (m UIModel) logoView() string {
@@ -339,6 +348,10 @@ func (m UIModel) stateView() string {
 	}
 
 	s := prefix + " " + StyleSubtitle.Render(m.viewState.String())
+
+	if m.followed {
+		s += " [following]"
+	}
 
 	if m.lastLog != "" {
 		s += "  " + StyleComment.Render(m.lastLog)
