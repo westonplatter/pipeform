@@ -44,8 +44,8 @@ func (s ViewState) NextState(msg views.Message) (ViewState, bool) {
 		case json.MessageApplyStart:
 			return ViewStateApply, true
 		case json.MessageChangeSummary:
-			// There are two change summary messages, one after change, one after apply.
-			// We only handle the one after apply, as the one after change is less interesting to show.
+			// There are two change summary messages, one after plan, one after apply.
+			// We only handle the one after apply, as the one after plan is less interesting to show.
 			if msg.(views.ChangeSummaryMsg).Changes.Operation == json.OperationApplied {
 				return ViewStateSummary, true
 			}

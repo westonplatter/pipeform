@@ -204,6 +204,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.totalCnt = changes.Add + changes.Change + changes.Import + changes.Remove
 			m.operation = changes.Operation
 
+			// Specifically, if the total count is 0, we update the progress bar directly as it is 100% anyway.
+			if m.totalCnt == 0 {
+				cmds = append(cmds, m.progress.SetPercent(1))
+			}
+
 		case views.OutputMsg:
 			// TODO: How to show output?
 
