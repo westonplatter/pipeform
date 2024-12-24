@@ -9,6 +9,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/term"
@@ -69,6 +70,8 @@ func main() {
 			return ctx, nil
 		},
 		Action: func(context.Context, *cli.Command) error {
+			startTime := time.Now()
+
 			logger, err := log.NewLogger(log.Level(fset.LogLevel), fset.LogPath)
 			if err != nil {
 				fmt.Println(err)
@@ -87,7 +90,7 @@ func main() {
 			}
 
 			reader := reader.NewReader(os.Stdin, teeWriter)
-			m := ui.NewRuntimeModel(logger, reader)
+			m := ui.NewRuntimeModel(logger, reader, startTime)
 			tm, err := tea.NewProgram(m, tea.WithInputTTY(), tea.WithAltScreen()).Run()
 			if err != nil {
 				return fmt.Errorf("Error running program: %v\n", err)

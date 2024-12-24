@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/magodo/pipeform/internal/clipboard"
 	"github.com/magodo/pipeform/internal/log"
@@ -31,6 +32,7 @@ type versionInfo struct {
 }
 
 type UIModel struct {
+	startTime time.Time
 	logger    *log.Logger
 	reader    reader.Reader
 	teeWriter io.Writer
@@ -70,13 +72,14 @@ type UIModel struct {
 	followed bool
 }
 
-func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
+func NewRuntimeModel(logger *log.Logger, reader reader.Reader, startTime time.Time) UIModel {
 	t := table.New(table.WithFocused(true))
 	t.SetStyles(StyleTableFunc())
 
 	cp := clipboard.NewClipboard()
 
 	model := UIModel{
+		startTime: startTime,
 		logger:    logger,
 		reader:    reader,
 		viewState: ViewStateIdle,
@@ -174,7 +177,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case receiverEOFMsg:
 		m.logger.Info("Receiver reaches EOF")
 		m.isEOF = true
-		m.lastLog = ""
+		m.lastLog = fmt.Sprintf("Time spent: %s", time.Now().Sub(m.startTime).Truncate(time.Second))
 		return m, nil
 
 	case receiverMsg:
