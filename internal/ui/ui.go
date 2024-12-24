@@ -221,6 +221,9 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case views.OutputMsg:
 			for name, o := range msg.Outputs {
+				if o.Action != "" {
+					continue
+				}
 				m.outputInfos = append(m.outputInfos, &OutputInfo{
 					Name:      name,
 					Sensitive: o.Sensitive,
