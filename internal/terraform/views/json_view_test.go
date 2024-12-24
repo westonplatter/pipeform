@@ -45,8 +45,8 @@ var changeSummary = json.ChangeSummary{
 var outputs = json.Outputs{
 	"foo": {
 		Sensitive: true,
-		Type:      []byte("123"),
-		Value:     []byte("321"),
+		Type:      "string",
+		Value:     []byte(`"foo"`),
 		Action:    json.ActionCreate,
 	},
 }
@@ -254,8 +254,8 @@ func TestMarshal(t *testing.T) {
     "foo": {
 		"action": "create",
 		"sensitive": true,
-		"type": 123,
-		"value": 321
+		"type": "string",
+		"value": "foo"
 	}
   }
 }
@@ -497,8 +497,8 @@ func TestUnmarshal(t *testing.T) {
     "foo": {
 		"action": "create",
 		"sensitive": true,
-		"type": 123,
-		"value": 321
+		"type": "string",
+		"value": "foo"
 	}
   }
 }

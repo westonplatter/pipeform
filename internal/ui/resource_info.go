@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/magodo/pipeform/internal/terraform/views/json"
 )
 
 type ResourceStatus string
@@ -47,7 +46,6 @@ type ResourceInfo struct {
 	Status    ResourceStatus
 	StartTime time.Time
 	EndTime   time.Time
-	Diags     []json.Diagnostic
 }
 
 type ResourceInfoUpdate struct {
@@ -56,11 +54,6 @@ type ResourceInfoUpdate struct {
 }
 
 // ResourceInfos records the operation information for each resource's action.
-// The first key is the ResourceAddr.
-// The second key is the resource Action.
-// It can happen that one single resource have more than one actions conducted in one apply,
-// e.g., a resource being re-created (remove + create).
-// type ResourceInfos map[string]map[json.ChangeAction]*ResourceInfo
 type ResourceInfos []*ResourceInfo
 
 func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUpdate) bool {
@@ -72,16 +65,6 @@ func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUp
 			if update.Endtime != nil {
 				info.EndTime = *update.Endtime
 			}
-			return true
-		}
-	}
-	return false
-}
-
-func (infos ResourceInfos) AddDiags(loc ResourceInfoLocator, diags ...json.Diagnostic) bool {
-	for _, info := range infos {
-		if info.Loc == loc {
-			info.Diags = append(info.Diags, diags...)
 			return true
 		}
 	}
@@ -122,4 +105,25 @@ func (infos ResourceInfos) ToRows(total int) []table.Row {
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+func (infos ResourceInfos) ToColumns(width int) []table.Column {
+	const statusWidth = 6
+	const actionWidth = 8
+	const timeWidth = 24
+
+	dynamicWidth := width - statusWidth - actionWidth - timeWidth
+
+	indexWidth := dynamicWidth / 5
+	moduleWidth := dynamicWidth / 5 * 2
+	resourceWidth := dynamicWidth / 5 * 2
+
+	return []table.Column{
+		{Title: "Index", Width: indexWidth},
+		{Title: "Status", Width: statusWidth},
+		{Title: "Action", Width: actionWidth},
+		{Title: "Module", Width: moduleWidth},
+		{Title: "Resource", Width: resourceWidth},
+		{Title: "Time", Width: timeWidth},
+	}
 }

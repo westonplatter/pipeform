@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/magodo/pipeform/internal/clipboard"
 	"github.com/magodo/pipeform/internal/log"
 	"github.com/muesli/reflow/indent"
 
@@ -34,8 +35,9 @@ type UIModel struct {
 	reader    reader.Reader
 	teeWriter io.Writer
 
-	viewState ViewState
-	lastLog   string
+	viewState         ViewState
+	lastLog           string
+	userOperationInfo string
 
 	isEOF bool
 
@@ -43,6 +45,8 @@ type UIModel struct {
 
 	refreshInfos ResourceInfos
 	applyInfos   ResourceInfos
+
+	outputInfos OutputInfos
 
 	version *versionInfo
 
@@ -59,26 +63,27 @@ type UIModel struct {
 	table    table.Model
 	progress progress.Model
 
+	cp clipboard.Clipboard
+
 	followed bool
 }
 
 func NewRuntimeModel(logger *log.Logger, reader reader.Reader) UIModel {
-	t := table.New(
-		table.WithColumns(TableColumn(60)),
-		table.WithFocused(true),
-	)
+	t := table.New(table.WithFocused(true))
 	t.SetStyles(StyleTableFunc())
 
+	cp := clipboard.NewClipboard()
+
 	model := UIModel{
-		logger:     logger,
-		reader:     reader,
-		viewState:  ViewStateIdle,
-		applyInfos: ResourceInfos{},
-		keymap:     keymap,
-		help:       help.New(),
-		spinner:    spinner.New(),
-		table:      t,
-		progress:   progress.New(),
+		logger:    logger,
+		reader:    reader,
+		viewState: ViewStateIdle,
+		keymap:    NewKeyMap(cp.Enabled()),
+		help:      help.New(),
+		spinner:   spinner.New(),
+		table:     t,
+		progress:  progress.New(),
+		cp:        cp,
 	}
 
 	return model
@@ -111,6 +116,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.logger.Trace("Message received", "type", fmt.Sprintf("%T", msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		m.userOperationInfo = ""
 		switch {
 		case key.Matches(msg, m.keymap.Quit):
 			m.logger.Warn("Interrupt key received, quit the program")
@@ -121,22 +127,22 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.Follow):
 			m.followed = !m.followed
 			return m, nil
+		case key.Matches(msg, m.keymap.Copy):
+			m.copyTableRow()
+			return m, nil
 		default:
 			table, cmd := m.table.Update(msg)
 			m.table = table
 			return m, cmd
 		}
 	case tea.WindowSizeMsg:
-
 		progressWidth := msg.Width - padding*2
 		m.progress.Width = progressWidth
 
 		tableWidth := msg.Width - padding*2 - 10
 		tableHeight := msg.Height - padding*2 - 10
-
-		m.table.SetColumns(TableColumn(tableWidth))
-		m.table.SetWidth(tableWidth)
-		m.table.SetHeight(tableHeight)
+		m.setTableOutlook(tableWidth, tableHeight)
+		m.setTableRows()
 
 		return m, nil
 
@@ -210,7 +216,15 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case views.OutputMsg:
-			// TODO: How to show output?
+			for name, o := range msg.Outputs {
+				m.outputInfos = append(m.outputInfos, &OutputInfo{
+					Name:      name,
+					Sensitive: o.Sensitive,
+					Type:      o.Type,
+					ValueStr:  o.Value,
+					Action:    o.Action,
+				})
+			}
 
 		case views.HookMsg:
 			m.logger.Debug("Hook message", "type", fmt.Sprintf("%T", msg.Hook))
@@ -309,14 +323,38 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Update viewState
-		m.viewState, _ = m.viewState.NextState(msg.msg)
+		var change bool
+		m.viewState, change = m.viewState.NextState(msg.msg)
 
-		m.setTableRows()
+		if change {
+			cmds = append(cmds, tea.WindowSize())
+		} else {
+			m.setTableRows()
+		}
 
 		return m, tea.Batch(cmds...)
 
 	default:
 		return m, nil
+	}
+}
+
+func (m *UIModel) setTableOutlook(width, height int) {
+	m.table.SetWidth(width)
+	m.table.SetHeight(height)
+
+	// Clean up the rows before changing table columns, mainly to avoid
+	// existing rows have more columns than the new columns, i.e. from
+	// "apply" (6) to "summary" (5).
+	m.table.SetRows(nil)
+
+	switch m.viewState {
+	case ViewStateRefresh:
+		m.table.SetColumns(m.refreshInfos.ToColumns(width))
+	case ViewStateApply:
+		m.table.SetColumns(m.applyInfos.ToColumns(width))
+	case ViewStateSummary:
+		m.table.SetColumns(m.outputInfos.ToColumns(width))
 	}
 }
 
@@ -327,11 +365,36 @@ func (m *UIModel) setTableRows() {
 		m.table.SetRows(m.refreshInfos.ToRows(0))
 	case ViewStateApply:
 		m.table.SetRows(m.applyInfos.ToRows(m.totalCnt))
+	case ViewStateSummary:
+		m.table.SetRows(m.outputInfos.ToRows())
 	}
 
 	if m.followed {
 		m.table.GotoBottom()
 	}
+}
+
+func (m *UIModel) copyTableRow() {
+	if !m.cp.Enabled() {
+		return
+	}
+
+	switch m.viewState {
+	case ViewStateRefresh:
+		if row := m.table.SelectedRow(); len(row) > 4 {
+			m.cp.Write([]byte(row[4]))
+		}
+	case ViewStateApply:
+		if row := m.table.SelectedRow(); len(row) > 4 {
+			m.cp.Write([]byte(row[4]))
+		}
+	case ViewStateSummary:
+		if row := m.table.SelectedRow(); len(row) > 4 {
+			m.cp.Write([]byte(row[4]))
+		}
+	}
+
+	m.userOperationInfo = "Copied!"
 }
 
 func (m UIModel) logoView() string {
@@ -372,11 +435,21 @@ func (m UIModel) View() string {
 
 	s += "\n\n" + StyleTableBase.Render(m.table.View())
 
+	var progressBar string
 	if m.viewState >= ViewStateApply {
-		s += "\n\n" + m.progress.View()
+		progressBar = m.progress.View()
+	} else {
+		progressBar = "\n"
 	}
+	s += "\n\n" + progressBar
 
-	s += "\n\n" + m.help.View(m.keymap)
+	var bottomLine string
+	if m.userOperationInfo != "" {
+		bottomLine = StyleComment.Render(m.userOperationInfo)
+	} else {
+		bottomLine = m.help.View(m.keymap)
+	}
+	s += "\n\n" + bottomLine
 
 	return indent.String(s, indentLevel)
 }

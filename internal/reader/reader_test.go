@@ -147,7 +147,7 @@ func TestReader(t *testing.T) {
 			Outputs: vjson.Outputs{
 				"pets": {
 					Sensitive: false,
-					Type:      json.RawMessage([]byte(`"string"`)),
+					Type:      "string",
 					Value:     json.RawMessage([]byte(`"smart-lizard"`)),
 				},
 			},
