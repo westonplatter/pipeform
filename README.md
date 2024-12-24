@@ -43,7 +43,7 @@ Note that the clipboard functionality is only enabled when the tool is built pro
 
 ### What happens if terraform encounters an error?
 
-When Terraform encoutners error(s), the tool will display an error indicator ❌ in the "state" section on the top left and stay in a terminated state. In this case, the user is supposed to quit. Afterwards, the Terraform JSON error diagnostics will be displayed to `stderr`.
+When Terraform encounters error(s), the tool will display an error indicator ❌ in the "state" section on the top left and stay in a terminated state. In this case, the user is supposed to quit. Afterwards, the Terraform JSON error diagnostics will be displayed to `stderr`.
 
 ### How to exit during operation?
 
