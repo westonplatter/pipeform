@@ -63,6 +63,8 @@ type UIModel struct {
 	table    table.Model
 	progress progress.Model
 
+	tableSize Size
+
 	cp clipboard.Clipboard
 
 	followed bool
@@ -139,9 +141,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		progressWidth := msg.Width - padding*2
 		m.progress.Width = progressWidth
 
-		tableWidth := msg.Width - padding*2 - 10
-		tableHeight := msg.Height - padding*2 - 10
-		m.setTableOutlook(tableWidth, tableHeight)
+		m.tableSize = Size{
+			Width:  msg.Width - padding*2 - 10,
+			Height: msg.Height - padding*2 - 10,
+		}
+		m.setTableOutlook()
 		m.setTableRows()
 
 		return m, nil
@@ -324,10 +328,16 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Update viewState
 		var change bool
+		oldState := m.viewState
 		m.viewState, change = m.viewState.NextState(msg.msg)
-
 		if change {
-			cmds = append(cmds, tea.WindowSize())
+			m.logger.Info("View State change", "old", oldState.String(), "new", m.viewState.String())
+
+			// Clean up the rows before changing table columns, mainly to avoid
+			// existing rows have more columns than the new columns, i.e. from
+			// "apply" (6) to "summary" (5).
+			m.table.SetRows(nil)
+			m.setTableOutlook()
 		} else {
 			m.setTableRows()
 		}
@@ -339,22 +349,16 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *UIModel) setTableOutlook(width, height int) {
-	m.table.SetWidth(width)
-	m.table.SetHeight(height)
-
-	// Clean up the rows before changing table columns, mainly to avoid
-	// existing rows have more columns than the new columns, i.e. from
-	// "apply" (6) to "summary" (5).
-	m.table.SetRows(nil)
-
+func (m *UIModel) setTableOutlook() {
+	m.table.SetWidth(m.tableSize.Width)
+	m.table.SetHeight(m.tableSize.Height)
 	switch m.viewState {
 	case ViewStateRefresh:
-		m.table.SetColumns(m.refreshInfos.ToColumns(width))
+		m.table.SetColumns(m.refreshInfos.ToColumns(m.tableSize.Width))
 	case ViewStateApply:
-		m.table.SetColumns(m.applyInfos.ToColumns(width))
+		m.table.SetColumns(m.applyInfos.ToColumns(m.tableSize.Width))
 	case ViewStateSummary:
-		m.table.SetColumns(m.outputInfos.ToColumns(width))
+		m.table.SetColumns(m.outputInfos.ToColumns(m.tableSize.Width))
 	}
 }
 
