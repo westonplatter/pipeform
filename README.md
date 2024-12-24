@@ -18,10 +18,6 @@ Example:
 
 ![demo](./img/demo.gif)
 
-## About Errors
-
-When Terraform failed, the tool will display an error indicator ❌ in the "state" section on the top left. In this case, the user is supposed to quit. Afterwards, the Terraform JSON error diagnostics will be displayed to `stderr`.
-
 ## Timing CSV File
 
 The tool will generate a CSV file for further analysis/visualization by specifying the `--time-csv=<path>` option.
@@ -38,6 +34,16 @@ Start Timestamp,End Timestamp,Stage,Action,Module,Resource Type,Resource Name,Re
 ```
 
 ## FAQ
+
+### How to copy output variables?
+
+In a successful run, the tool will end up at the `SUMMARY` stage, that displays a table of output variables defined. Users can select any of the output variables and press <kbd>c</kbd> to copy the value to the system clipboard.
+
+Note that the clipboard functionality is only enabled when the tool is built properly (CGO might be required) on a supported platform. [Details](https://github.com/golang-design/clipboard?tab=readme-ov-file#platform-specific-details).
+
+### What happens if terraform encounters an error?
+
+When Terraform encoutners error(s), the tool will display an error indicator ❌ in the "state" section on the top left and stay in a terminated state. In this case, the user is supposed to quit. Afterwards, the Terraform JSON error diagnostics will be displayed to `stderr`.
 
 ### How to exit during operation?
 
