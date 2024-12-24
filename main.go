@@ -23,6 +23,7 @@ type FlagSet struct {
 	LogLevel string
 	LogPath  string
 	TeePath  string
+	TimeCsv  string
 }
 
 var fset FlagSet
@@ -56,6 +57,12 @@ func main() {
 				Usage:       `Equivalent to "terraform ... -json | tee <value> | pipeform"`,
 				Sources:     cli.EnvVars("PF_TEE"),
 				Destination: &fset.TeePath,
+			},
+			&cli.StringFlag{
+				Name:        "time-csv",
+				Usage:       "The csv file that records the timing of each operation of each resource",
+				Sources:     cli.EnvVars("PF_TIME_CSV"),
+				Destination: &fset.TimeCsv,
 			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
@@ -98,6 +105,18 @@ func main() {
 
 			m = tm.(ui.UIModel)
 
+			if path := fset.TimeCsv; path != "" {
+				f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+				if err != nil {
+					return fmt.Errorf("open time csv file: %v", err)
+				}
+				defer f.Close()
+
+				if _, err := f.Write(m.ToCsv()); err != nil {
+					fmt.Fprintf(os.Stderr, "writing time csv file: %v", err)
+				}
+			}
+
 			if !m.IsEOF() {
 				fmt.Fprintln(os.Stderr, "Interrupted!")
 				printDiagErrs(m)
@@ -105,7 +124,6 @@ func main() {
 			}
 
 			printDiagErrs(m)
-
 			return nil
 		},
 	}

@@ -14,6 +14,21 @@
 
 Note that all the commands must have the `-json` flag specified, as the tool is built on top of the [Terraform machine-readable UI](https://developer.hashicorp.com/terraform/internals/machine-readable-ui).
 
+## Timing CSV File
+
+The tool will generate a CSV file for further analysis/visualization by specifying the `--time-csv=<path>` option.
+
+A taste of the output:
+
+```csv
+Start Timestamp,End Timestamp,Stage,Action,Module,Resource Type,Resource Name,Resource Key,Status,Duration (sec)
+1735018449,1735018453,apply,create,,null_resource,cluster,13,complete,4
+1735018449,1735018453,apply,create,,null_resource,cluster,3,complete,4
+1735018449,1735018451,apply,create,,null_resource,cluster,1,complete,2
+1735018450,1735018451,apply,create,,null_resource,cluster,25,complete,1
+1735018450,1735018452,apply,create,,null_resource,cluster,26,complete,2
+```
+
 ## FAQ
 
 ### How to exit during operation?

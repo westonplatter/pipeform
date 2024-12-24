@@ -3,9 +3,11 @@ package ui
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/magodo/pipeform/internal/terraform/views/json"
 )
 
 type ResourceStatus string
@@ -42,10 +44,11 @@ type ResourceInfoLocator struct {
 }
 
 type ResourceInfo struct {
-	Loc       ResourceInfoLocator
-	Status    ResourceStatus
-	StartTime time.Time
-	EndTime   time.Time
+	RawResourceAddr json.ResourceAddr
+	Loc             ResourceInfoLocator
+	Status          ResourceStatus
+	StartTime       time.Time
+	EndTime         time.Time
 }
 
 type ResourceInfoUpdate struct {
@@ -74,7 +77,7 @@ func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUp
 // ToRows turns the ResourceInfos into table rows.
 // The total is used to decorate the index as a fraction, if total > 0.
 func (infos ResourceInfos) ToRows(total int) []table.Row {
-	t := time.Now()
+	now := time.Now()
 	var rows []table.Row
 	for i, info := range infos {
 		idx := strconv.Itoa(i + 1)
@@ -82,12 +85,7 @@ func (infos ResourceInfos) ToRows(total int) []table.Row {
 			idx = fmt.Sprintf("%d/%d", i+1, total)
 		}
 
-		var dur time.Duration
-		if info.EndTime.Equal(time.Time{}) {
-			dur = t.Sub(info.StartTime).Truncate(time.Second)
-		} else {
-			dur = info.EndTime.Sub(info.StartTime).Truncate(time.Second)
-		}
+		dur := info.Duration(now)
 
 		module := "-"
 		if info.Loc.Module != "" {
@@ -126,4 +124,36 @@ func (infos ResourceInfos) ToColumns(width int) []table.Column {
 		{Title: "Resource", Width: resourceWidth},
 		{Title: "Time", Width: timeWidth},
 	}
+}
+
+func (infos ResourceInfos) ToCsv(stage string) []string {
+	var out []string
+	now := time.Now()
+	for _, info := range infos {
+		key, _ := info.RawResourceAddr.ResourceKey.MarshalJSON()
+		line := []string{
+			strconv.FormatInt(info.StartTime.Unix(), 10),
+			strconv.FormatInt(info.EndTime.Unix(), 10),
+			stage,
+			info.Loc.Action,
+			info.Loc.Module,
+			info.RawResourceAddr.ResourceType,
+			info.RawResourceAddr.ResourceName,
+			string(key),
+			string(info.Status),
+			strconv.FormatInt(int64(info.Duration(now).Seconds()), 10),
+		}
+		out = append(out, strings.Join(line, ","))
+	}
+	return out
+}
+
+func (info ResourceInfo) Duration(now time.Time) time.Duration {
+	var dur time.Duration
+	if info.EndTime.Equal(time.Time{}) {
+		dur = now.Sub(info.StartTime).Truncate(time.Second)
+	} else {
+		dur = info.EndTime.Sub(info.StartTime).Truncate(time.Second)
+	}
+	return dur
 }

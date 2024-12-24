@@ -241,6 +241,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch hook := msg.Hook.(type) {
 			case json.RefreshStart:
 				res := &ResourceInfo{
+					RawResourceAddr: hook.Resource,
 					Loc: ResourceInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
@@ -269,6 +270,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case json.OperationStart:
 				res := &ResourceInfo{
+					RawResourceAddr: hook.Resource,
 					Loc: ResourceInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
@@ -405,6 +407,26 @@ func (m *UIModel) copyTableRow() {
 	}
 
 	m.userOperationInfo = "Copied!"
+}
+
+func (m UIModel) ToCsv() []byte {
+	out := []string{
+		strings.Join([]string{
+			"Start Timestamp",
+			"End Timestamp",
+			"Stage",
+			"Action",
+			"Module",
+			"Resource Type",
+			"Resource Name",
+			"Resource Key",
+			"Status",
+			"Duration (sec)",
+		}, ","),
+	}
+	out = append(out, m.refreshInfos.ToCsv("refresh")...)
+	out = append(out, m.applyInfos.ToCsv("apply")...)
+	return []byte(strings.Join(out, "\n"))
 }
 
 func (m UIModel) logoView() string {
