@@ -39,8 +39,8 @@ func NewKeyMap(clipboardEnabled bool) KeyMap {
 			key.WithHelp("ctrl+c", "quit"),
 		),
 		Copy: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("enter", "copy"),
+			key.WithKeys("c"),
+			key.WithHelp("c", "copy"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
