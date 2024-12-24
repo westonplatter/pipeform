@@ -14,6 +14,14 @@
 
 Note that all the commands must have the `-json` flag specified, as the tool is built on top of the [Terraform machine-readable UI](https://developer.hashicorp.com/terraform/internals/machine-readable-ui).
 
+Example:
+
+![demo](./img/demo.gif)
+
+## About Errors
+
+When Terraform failed, the tool will display an error indicator ❌ in the "state" section on the top left. In this case, the user is supposed to quit. Afterwards, the Terraform JSON error diagnostics will be displayed to `stderr`.
+
 ## Timing CSV File
 
 The tool will generate a CSV file for further analysis/visualization by specifying the `--time-csv=<path>` option.
