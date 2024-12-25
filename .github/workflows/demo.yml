@@ -1,0 +1,24 @@
+name: Pipeform Demo
+on:
+    workflow_dispatch
+jobs:
+  Demo:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v4
+        - name: Setup Go 1.23
+          uses: actions/setup-go@v5
+          with:
+            go-version: '1.23'
+        - name: Install pipeform
+          run: go install
+        - uses: hashicorp/setup-terraform@v3
+          with:
+            terraform_version: "1.10.3"
+        - run: |
+            cd example
+            terraform init
+            terraform apply -json -auto-approve | $HOME/go/bin/pipeform
+            
+        
+          
