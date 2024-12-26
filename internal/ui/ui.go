@@ -26,11 +26,6 @@ const (
 	indentLevel = 2
 )
 
-type versionInfo struct {
-	terraform string
-	ui        string
-}
-
 type UIModel struct {
 	startTime time.Time
 	logger    *log.Logger
@@ -50,7 +45,7 @@ type UIModel struct {
 
 	outputInfos OutputInfos
 
-	version *versionInfo
+	versionMsg *string
 
 	// These are read from the ChangeSummaryMsg
 	operation json.Operation
@@ -189,10 +184,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg := msg.msg.(type) {
 		case views.VersionMsg:
-			m.version = &versionInfo{
-				terraform: msg.Terraform,
-				ui:        msg.UI,
-			}
+			m.versionMsg = &msg.BaseMsg.Message
 
 		case views.LogMsg:
 			// There's no much useful information for now.
@@ -431,8 +423,8 @@ func (m UIModel) ToCsv() []byte {
 
 func (m UIModel) logoView() string {
 	msg := "pipeform"
-	if m.version != nil {
-		msg += fmt.Sprintf(" (terraform: %s)", m.version.terraform)
+	if m.versionMsg != nil {
+		msg += fmt.Sprintf(" (%s)", *m.versionMsg)
 	}
 	return StyleTitle.Render(" " + msg + " ")
 }
