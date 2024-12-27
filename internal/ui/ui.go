@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/paginator"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
@@ -32,7 +33,13 @@ type UIModel struct {
 	reader    reader.Reader
 	teeWriter io.Writer
 
-	viewState         ViewState
+	// state is the actual state of the process
+	state         ViewState
+	visitedStates []ViewState
+	// viewState is the state of the current view. It is nil until EOF received.
+	// After which, users can select different view.
+	viewState *ViewState
+
 	lastLog           string
 	userOperationInfo string
 
@@ -55,10 +62,11 @@ type UIModel struct {
 
 	keymap KeyMap
 
-	help     help.Model
-	spinner  spinner.Model
-	table    table.Model
-	progress progress.Model
+	help      help.Model
+	spinner   spinner.Model
+	table     table.Model
+	progress  progress.Model
+	paginator paginator.Model
 
 	tableSize Size
 
@@ -73,17 +81,27 @@ func NewRuntimeModel(logger *log.Logger, reader reader.Reader, startTime time.Ti
 
 	cp := clipboard.NewClipboard()
 
+	keymap := NewKeyMap(cp.Enabled())
+
+	p := paginator.New()
+	p.KeyMap = keymap.PaginatorMap
+	p.Type = paginator.Dots
+	p.ActiveDot = StyleActiveDot
+	p.InactiveDot = StyleInactiveDot
+
 	model := UIModel{
-		startTime: startTime,
-		logger:    logger,
-		reader:    reader,
-		viewState: ViewStateIdle,
-		keymap:    NewKeyMap(cp.Enabled()),
-		help:      help.New(),
-		spinner:   spinner.New(),
-		table:     t,
-		progress:  progress.New(),
-		cp:        cp,
+		startTime:     startTime,
+		logger:        logger,
+		reader:        reader,
+		state:         ViewStateIdle,
+		visitedStates: []ViewState{ViewStateIdle},
+		keymap:        keymap,
+		help:          help.New(),
+		spinner:       spinner.New(),
+		table:         t,
+		progress:      progress.New(),
+		paginator:     p,
+		cp:            cp,
 	}
 
 	return model
@@ -130,6 +148,24 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.Copy):
 			m.copyTableRow()
 			return m, nil
+		case key.Matches(msg, m.keymap.PaginatorMap.PrevPage):
+			if m.viewState == nil {
+				return m, nil
+			}
+			m.paginator.PrevPage()
+			idx, _ := m.paginator.GetSliceBounds(len(m.visitedStates))
+			m.viewState = &m.visitedStates[idx]
+			m.resetTableNonEmpty()
+			return m, nil
+		case key.Matches(msg, m.keymap.PaginatorMap.NextPage):
+			if m.viewState == nil {
+				return m, nil
+			}
+			m.paginator.NextPage()
+			idx, _ := m.paginator.GetSliceBounds(len(m.visitedStates))
+			m.viewState = &m.visitedStates[idx]
+			m.resetTableNonEmpty()
+			return m, nil
 		default:
 			table, cmd := m.table.Update(msg)
 			m.table = table
@@ -173,6 +209,15 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Info("Receiver reaches EOF")
 		m.isEOF = true
 		m.lastLog = fmt.Sprintf("Time spent: %s", time.Now().Sub(m.startTime).Truncate(time.Second))
+
+		// Enable paginator
+		m.paginator.SetTotalPages(len(m.visitedStates))
+		for i := 0; i < len(m.visitedStates); i++ {
+			m.paginator.NextPage()
+		}
+		m.viewState = &m.state
+		m.keymap.EnablePaginator()
+
 		return m, nil
 
 	case receiverMsg:
@@ -349,16 +394,12 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Update viewState
 		var change bool
-		oldState := m.viewState
-		m.viewState, change = m.viewState.NextState(msg.msg)
+		oldState := m.state
+		m.state, change = m.state.NextState(msg.msg)
 		if change {
-			m.logger.Info("View State change", "old", oldState.String(), "new", m.viewState.String())
-
-			// Clean up the rows before changing table columns, mainly to avoid
-			// existing rows have more columns than the new columns, i.e. from
-			// "apply" (6) to "summary" (5).
-			m.table.SetRows(nil)
-			m.setTableOutlook()
+			m.logger.Info("View State change", "old", oldState.String(), "new", m.state.String())
+			m.visitedStates = append(m.visitedStates, m.state)
+			m.resetTableEmpty()
 		} else {
 			m.setTableRows()
 		}
@@ -370,10 +411,25 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
+func (m *UIModel) resetTableEmpty() {
+	// Clean up the rows before changing table columns, mainly to avoid
+	// existing rows have more columns than the new columns, i.e. from
+	// "apply" (6) to "summary" (5).
+	m.table.SetRows(nil)
+	m.table.SetCursor(0)
+	m.setTableOutlook()
+}
+
+func (m *UIModel) resetTableNonEmpty() {
+	m.resetTableEmpty()
+	m.setTableRows()
+}
+
 func (m *UIModel) setTableOutlook() {
 	m.table.SetWidth(m.tableSize.Width)
 	m.table.SetHeight(m.tableSize.Height)
-	switch m.viewState {
+
+	switch m.getViewState() {
 	case ViewStateRefresh:
 		m.table.SetColumns(m.refreshInfos.ToColumns(m.tableSize.Width))
 	case ViewStateApply:
@@ -385,7 +441,7 @@ func (m *UIModel) setTableOutlook() {
 
 // setTableRows on a one second pace.
 func (m *UIModel) setTableRows() {
-	switch m.viewState {
+	switch m.getViewState() {
 	case ViewStateRefresh:
 		m.table.SetRows(m.refreshInfos.ToRows(0))
 	case ViewStateApply:
@@ -404,7 +460,7 @@ func (m *UIModel) copyTableRow() {
 		return
 	}
 
-	switch m.viewState {
+	switch m.getViewState() {
 	case ViewStateRefresh:
 		if row := m.table.SelectedRow(); len(row) > 4 {
 			m.cp.Write([]byte(row[4]))
@@ -442,6 +498,13 @@ func (m UIModel) ToCsv() []byte {
 	return []byte(strings.Join(out, "\n"))
 }
 
+func (m *UIModel) getViewState() ViewState {
+	if m.viewState != nil {
+		return *m.viewState
+	}
+	return m.state
+}
+
 func (m UIModel) logoView() string {
 	msg := "pipeform"
 	if m.versionMsg != nil {
@@ -460,7 +523,7 @@ func (m UIModel) stateView() string {
 		}
 	}
 
-	s := prefix + " " + StyleSubtitle.Render(m.viewState.String())
+	s := prefix + " " + StyleSubtitle.Render(m.getViewState().String())
 
 	if m.followed {
 		s += " [following]"
@@ -481,12 +544,14 @@ func (m UIModel) View() string {
 	s += "\n\n" + StyleTableBase.Render(m.table.View())
 
 	var progressBar string
-	if m.viewState >= ViewStateApply {
+	if m.getViewState() == ViewStateApply {
 		progressBar = m.progress.View()
-	} else {
-		progressBar = "\n"
 	}
 	s += "\n\n" + progressBar
+
+	if m.viewState != nil {
+		s += "\n" + m.paginator.View()
+	}
 
 	var bottomLine string
 	if m.userOperationInfo != "" {
