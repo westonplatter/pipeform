@@ -201,7 +201,28 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// There's no much useful information for now.
 
 		case views.PlannedChangeMsg:
-			// TODO: Consider record the planned change action.
+			// Normally, we don't need to handle the PlannedChangeMsg here, as the ChangeSummaryMsg has all these information.
+			// The exception is that when apply with a plan file, there is no ChangeSummaryMsg sent from Terraform at this moment.
+			// (see: https://github.com/magodo/pipeform/issues/1)
+			// The counting here is a fallback logic to cover the case above. Otherwise, it will just be overwritten by ChangeSummaryMsg.
+			//
+			// TODO: Once https://github.com/hashicorp/terraform/pull/36245 merged, remove this part.
+
+			m.logger.Debug("Planned Change", "action", msg.Change.Action, "resource", msg.Change.Resource.Addr, "prev_resource", msg.Change.PreviousResource)
+			// Referencing the logic of terraform: internal/command/views/operation.go
+			// But we also count the "import"
+			switch msg.Change.Action {
+			case json.ActionCreate:
+				m.totalCnt++
+			case json.ActionDelete:
+				m.totalCnt++
+			case json.ActionUpdate:
+				m.totalCnt++
+			case json.ActionReplace:
+				m.totalCnt += 2
+			case json.ActionImport:
+				m.totalCnt++
+			}
 
 		case views.ChangeSummaryMsg:
 			changes := msg.Changes
