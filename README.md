@@ -18,6 +18,12 @@ Example:
 
 ![demo](./img/demo.gif)
 
+## Install
+
+```shell
+go install github.com/magodo/pipeform@main
+```
+
 ## Timing CSV File
 
 The tool will generate a CSV file for further analysis/visualization by specifying the `--time-csv=<path>` option.
