@@ -234,12 +234,9 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case views.LogMsg:
 			// There's no much useful information for now.
 		case views.DiagnosticsMsg:
-			// TODO: Link resource related diag to the resource info
 			switch strings.ToLower(msg.Level) {
-			case "warn":
-				m.diags.Warns = append(m.diags.Warns, *msg.Diagnostic)
-			case "error":
-				m.diags.Errs = append(m.diags.Errs, *msg.Diagnostic)
+			case "warn", "error":
+				m.diags = append(m.diags, *msg.Diagnostic)
 			}
 
 		case views.ResourceDriftMsg:
@@ -516,10 +513,10 @@ func (m UIModel) logoView() string {
 func (m UIModel) stateView() string {
 	prefix := m.spinner.View()
 	if m.isEOF {
-		if len(m.diags.Errs) == 0 {
-			prefix = "✅"
-		} else {
+		if m.diags.HasError() {
 			prefix = "❌"
+		} else {
+			prefix = "✅"
 		}
 	}
 

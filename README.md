@@ -47,9 +47,11 @@ In a successful run, the tool will end up at the `SUMMARY` stage, that displays 
 
 Note that the clipboard functionality is only enabled when the tool is built properly (CGO might be required) on a supported platform. [Details](https://github.com/golang-design/clipboard?tab=readme-ov-file#platform-specific-details).
 
-### What happens if terraform encounters an error?
+### What happens if terraform encounters any warning or error?
 
-When Terraform encounters error(s), the tool will display an error indicator ❌ in the "state" section on the top left and stay in a terminated state. In this case, the user is supposed to quit. Afterwards, the Terraform JSON error diagnostics will be displayed to `stderr`.
+When the tool ends in either successful or failed state, the user is supposed to quit. Then the tool will print the Terraform JSON warning/error diagnostics to `stderr`.
+
+Especially, if Terraform encounters an error, the tool will display an error indicator ❌ in the "state" section on the top left and stay in the terminated state.
 
 ### How to exit during operation?
 
