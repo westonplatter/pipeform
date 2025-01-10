@@ -53,7 +53,7 @@ signs:
       - "${artifact}"
 
 changelog:
-  skip: true
+  disable: true
 
 release:
   draft: true
