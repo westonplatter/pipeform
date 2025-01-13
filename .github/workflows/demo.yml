@@ -19,7 +19,7 @@ jobs:
         - run: |
             cd example
             terraform init
-            terraform apply -json -auto-approve | $HOME/go/bin/pipeform
+            terraform apply -json -auto-approve | $HOME/go/bin/pipeform --plain-ui
             
         
           
