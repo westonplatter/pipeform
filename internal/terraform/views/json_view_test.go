@@ -82,6 +82,7 @@ func TestMarshal(t *testing.T) {
   "@timestamp": "2024-12-09T10:25:00Z",
   "type": "version",
   "terraform": "1.10.0",
+  "tofu": "",
   "ui": "0.1.0"
 }
 `,

@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/magodo/pipeform/internal/clipboard"
+	"github.com/magodo/pipeform/internal/csv"
 	"github.com/magodo/pipeform/internal/log"
+	"github.com/magodo/pipeform/internal/state"
 	"github.com/muesli/reflow/indent"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -31,7 +33,6 @@ type UIModel struct {
 	startTime time.Time
 	logger    *log.Logger
 	reader    reader.Reader
-	teeWriter io.Writer
 
 	// state is the actual state of the process
 	state         ViewState
@@ -47,10 +48,10 @@ type UIModel struct {
 
 	diags Diags
 
-	refreshInfos ResourceInfos
-	applyInfos   ResourceInfos
+	refreshInfos state.ResourceInfos
+	applyInfos   state.ResourceInfos
 
-	outputInfos OutputInfos
+	outputInfos state.OutputInfos
 
 	versionMsg *string
 
@@ -282,7 +283,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if o.Action != "" {
 					continue
 				}
-				m.outputInfos = append(m.outputInfos, &OutputInfo{
+				m.outputInfos = append(m.outputInfos, &state.OutputInfo{
 					Name:      name,
 					Sensitive: o.Sensitive,
 					Type:      o.Type,
@@ -295,43 +296,45 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logger.Debug("Hook message", "type", fmt.Sprintf("%T", msg.Hook))
 			switch hook := msg.Hook.(type) {
 			case json.RefreshStart:
-				res := &ResourceInfo{
+				res := &state.ResourceInfo{
+					Idx:             len(m.refreshInfos) + 1,
 					RawResourceAddr: hook.Resource,
-					Loc: ResourceInfoLocator{
+					Loc: state.ResourceInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
 						Action:       "refresh",
 					},
-					Status:    ResourceStatusStart,
+					Status:    state.ResourceStatusStart,
 					StartTime: msg.TimeStamp,
 				}
 				m.refreshInfos = append(m.refreshInfos, res)
 
 			case json.RefreshComplete:
-				loc := ResourceInfoLocator{
+				loc := state.ResourceInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       "refresh",
 				}
-				status := ResourceStatusComplete
-				update := ResourceInfoUpdate{
+				status := state.ResourceStatusComplete
+				update := state.ResourceInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
-				if !m.refreshInfos.Update(loc, update) {
+				if m.refreshInfos.Update(loc, update) == nil {
 					m.logger.Error("RefreshComplete hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", "refresh")
 					break
 				}
 
 			case json.OperationStart:
-				res := &ResourceInfo{
+				res := &state.ResourceInfo{
+					Idx:             len(m.applyInfos) + 1,
 					RawResourceAddr: hook.Resource,
-					Loc: ResourceInfoLocator{
+					Loc: state.ResourceInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
 						Action:       string(hook.Action),
 					},
-					Status:    ResourceStatusStart,
+					Status:    state.ResourceStatusStart,
 					StartTime: msg.TimeStamp,
 				}
 				m.applyInfos = append(m.applyInfos, res)
@@ -340,17 +343,17 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Ignore
 
 			case json.OperationComplete:
-				loc := ResourceInfoLocator{
+				loc := state.ResourceInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       string(hook.Action),
 				}
-				status := ResourceStatusComplete
-				update := ResourceInfoUpdate{
+				status := state.ResourceStatusComplete
+				update := state.ResourceInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
-				if !m.applyInfos.Update(loc, update) {
+				if m.applyInfos.Update(loc, update) == nil {
 					m.logger.Error("OperationComplete hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", hook.Action)
 					break
 				}
@@ -360,17 +363,17 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, m.progress.SetPercent(percentage))
 
 			case json.OperationErrored:
-				loc := ResourceInfoLocator{
+				loc := state.ResourceInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       string(hook.Action),
 				}
-				status := ResourceStatusErrored
-				update := ResourceInfoUpdate{
+				status := state.ResourceStatusErrored
+				update := state.ResourceInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
-				if !m.applyInfos.Update(loc, update) {
+				if m.applyInfos.Update(loc, update) == nil {
 					m.logger.Error("OperationErrored hook can't find the resource info", "module", hook.Resource.Module, "addr", hook.Resource.Addr, "action", hook.Action)
 					break
 				}
@@ -476,23 +479,10 @@ func (m *UIModel) copyTableRow() {
 }
 
 func (m UIModel) ToCsv() []byte {
-	out := []string{
-		strings.Join([]string{
-			"Start Timestamp",
-			"End Timestamp",
-			"Stage",
-			"Action",
-			"Module",
-			"Resource Type",
-			"Resource Name",
-			"Resource Key",
-			"Status",
-			"Duration (sec)",
-		}, ","),
-	}
-	out = append(out, m.refreshInfos.ToCsv("refresh")...)
-	out = append(out, m.applyInfos.ToCsv("apply")...)
-	return []byte(strings.Join(out, "\n"))
+	return csv.ToCsv(csv.Input{
+		RefreshInfos: m.refreshInfos,
+		ApplyInfos:   m.applyInfos,
+	})
 }
 
 func (m *UIModel) getViewState() ViewState {
