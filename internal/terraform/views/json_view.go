@@ -31,6 +31,7 @@ func (m BaseMsg) BaseMessage() BaseMsg {
 type VersionMsg struct {
 	BaseMsg
 	Terraform string `json:"terraform"`
+	Tofu      string `json:"tofu"`
 	UI        string `json:"ui"`
 }
 
