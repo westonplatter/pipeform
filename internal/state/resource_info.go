@@ -1,4 +1,4 @@
-package ui
+package state
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ const (
 	// TODO: Support provision? (provision is a intermidiate stage in the resource apply lifecycle)
 )
 
-func ResourceStatusEmoji(status ResourceStatus) string {
+func resourceStatusEmoji(status ResourceStatus) string {
 	switch status {
 	case ResourceStatusStart:
 		return "🕛"
@@ -44,6 +44,7 @@ type ResourceInfoLocator struct {
 }
 
 type ResourceInfo struct {
+	Idx             int
 	RawResourceAddr json.ResourceAddr
 	Loc             ResourceInfoLocator
 	Status          ResourceStatus
@@ -59,19 +60,27 @@ type ResourceInfoUpdate struct {
 // ResourceInfos records the operation information for each resource's action.
 type ResourceInfos []*ResourceInfo
 
-func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUpdate) bool {
+func (infos ResourceInfos) Find(loc ResourceInfoLocator) *ResourceInfo {
 	for _, info := range infos {
 		if info.Loc == loc {
-			if update.Status != nil {
-				info.Status = *update.Status
-			}
-			if update.Endtime != nil {
-				info.EndTime = *update.Endtime
-			}
-			return true
+			return info
 		}
 	}
-	return false
+	return nil
+}
+
+func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUpdate) *ResourceInfo {
+	info := infos.Find(loc)
+	if info == nil {
+		return nil
+	}
+	if update.Status != nil {
+		info.Status = *update.Status
+	}
+	if update.Endtime != nil {
+		info.EndTime = *update.Endtime
+	}
+	return info
 }
 
 // ToRows turns the ResourceInfos into table rows.
@@ -79,10 +88,10 @@ func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUp
 func (infos ResourceInfos) ToRows(total int) []table.Row {
 	now := time.Now()
 	var rows []table.Row
-	for i, info := range infos {
-		idx := strconv.Itoa(i + 1)
+	for _, info := range infos {
+		idx := strconv.Itoa(info.Idx)
 		if total > 0 {
-			idx = fmt.Sprintf("%d/%d", i+1, total)
+			idx = fmt.Sprintf("%d/%d", info.Idx, total)
 		}
 
 		dur := info.Duration(now)
@@ -94,7 +103,7 @@ func (infos ResourceInfos) ToRows(total int) []table.Row {
 
 		row := []string{
 			idx,
-			ResourceStatusEmoji(info.Status),
+			resourceStatusEmoji(info.Status),
 			string(info.Loc.Action),
 			module,
 			info.Loc.ResourceAddr,
