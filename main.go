@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/term"
 	"github.com/magodo/pipeform/internal/log"
+	"github.com/magodo/pipeform/internal/plainui"
 	"github.com/magodo/pipeform/internal/reader"
 	"github.com/magodo/pipeform/internal/ui"
 	"github.com/urfave/cli/v3"
@@ -24,6 +25,7 @@ type FlagSet struct {
 	LogPath  string
 	TeePath  string
 	TimeCsv  string
+	PlainUI  bool
 }
 
 var fset FlagSet
@@ -64,6 +66,12 @@ func main() {
 				Sources:     cli.EnvVars("PF_TIME_CSV"),
 				Destination: &fset.TimeCsv,
 			},
+			&cli.BoolFlag{
+				Name:        "plain-ui",
+				Usage:       "Simply print each log line by line, that expect to use in systems only support plain output",
+				Sources:     cli.EnvVars("PF_PLAIN_UI"),
+				Destination: &fset.PlainUI,
+			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 			// If this program starts in standalone, its stdin is the same as the terminal.
@@ -97,13 +105,39 @@ func main() {
 			}
 
 			reader := reader.NewReader(os.Stdin, teeWriter)
-			m := ui.NewRuntimeModel(logger, reader, startTime)
-			tm, err := tea.NewProgram(m, tea.WithInputTTY(), tea.WithAltScreen()).Run()
-			if err != nil {
-				return fmt.Errorf("Error running program: %v\n", err)
+
+			type Model interface {
+				ToCsv() []byte
+				IsEOF() bool
 			}
 
-			m = tm.(ui.UIModel)
+			var model Model
+
+			if fset.PlainUI {
+				m := plainui.NewRuntimeModel(logger, reader, os.Stdout, startTime)
+				if err := m.Run(); err != nil {
+					return fmt.Errorf("Error running program: %v\n", err)
+				}
+
+				model = m
+			} else {
+				m := ui.NewRuntimeModel(logger, reader, startTime)
+				tm, err := tea.NewProgram(m, tea.WithInputTTY(), tea.WithAltScreen()).Run()
+				if err != nil {
+					return fmt.Errorf("Error running program: %v\n", err)
+				}
+
+				m = tm.(ui.UIModel)
+
+				// Print diags
+				for _, diag := range m.Diags() {
+					if b, err := json.MarshalIndent(diag, "", "  "); err == nil {
+						fmt.Fprintln(os.Stderr, string(b))
+					}
+				}
+
+				model = m
+			}
 
 			if path := fset.TimeCsv; path != "" {
 				f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
@@ -112,14 +146,12 @@ func main() {
 				}
 				defer f.Close()
 
-				if _, err := f.Write(m.ToCsv()); err != nil {
+				if _, err := f.Write(model.ToCsv()); err != nil {
 					fmt.Fprintf(os.Stderr, "writing time csv file: %v", err)
 				}
 			}
 
-			printDiags(m)
-
-			if !m.IsEOF() {
+			if !model.IsEOF() {
 				fmt.Fprintln(os.Stderr, "Interrupted!")
 				os.Exit(1)
 			}
@@ -131,13 +163,5 @@ func main() {
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-}
-
-func printDiags(m ui.UIModel) {
-	for _, diag := range m.Diags() {
-		if b, err := json.MarshalIndent(diag, "", "  "); err == nil {
-			fmt.Fprintln(os.Stderr, string(b))
-		}
 	}
 }

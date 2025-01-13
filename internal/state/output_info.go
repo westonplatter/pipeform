@@ -1,4 +1,4 @@
-package ui
+package state
 
 import (
 	gojson "encoding/json"
