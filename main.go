@@ -98,7 +98,7 @@ func main() {
 
 			reader := reader.NewReader(os.Stdin, teeWriter)
 			m := ui.NewRuntimeModel(logger, reader, startTime)
-			tm, err := tea.NewProgram(m, tea.WithInput(nil), tea.WithAltScreen()).Run()
+			tm, err := tea.NewProgram(m, tea.WithInputTTY(), tea.WithAltScreen()).Run()
 			if err != nil {
 				return fmt.Errorf("Error running program: %v\n", err)
 			}
