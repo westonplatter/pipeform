@@ -7,8 +7,8 @@ import (
 )
 
 type Input struct {
-	RefreshInfos state.ResourceInfos
-	ApplyInfos   state.ResourceInfos
+	RefreshInfos state.ResourceOperationInfos
+	ApplyInfos   state.ResourceOperationInfos
 }
 
 func ToCsv(input Input) []byte {

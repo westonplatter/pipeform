@@ -20,8 +20,8 @@ type UIModel struct {
 	reader    reader.Reader
 	writer    io.Writer
 
-	refreshInfos state.ResourceInfos
-	applyInfos   state.ResourceInfos
+	refreshInfos state.ResourceOperationInfos
+	applyInfos   state.ResourceOperationInfos
 
 	totalCnt int
 	doneCnt  int
@@ -117,28 +117,28 @@ func (m *UIModel) Run() error {
 		case views.HookMsg:
 			switch hook := msg.Hook.(type) {
 			case json.RefreshStart:
-				res := &state.ResourceInfo{
+				res := &state.ResourceOperationInfo{
 					Idx:             len(m.refreshInfos) + 1,
 					RawResourceAddr: hook.Resource,
-					Loc: state.ResourceInfoLocator{
+					Loc: state.ResourceOperationInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
 						Action:       "refresh",
 					},
-					Status:    state.ResourceStatusStart,
+					Status:    state.ResourceOperationStatusStart,
 					StartTime: msg.TimeStamp,
 				}
 				m.refreshInfos = append(m.refreshInfos, res)
 				msgstr = msg.Message
 
 			case json.RefreshComplete:
-				loc := state.ResourceInfoLocator{
+				loc := state.ResourceOperationInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       "refresh",
 				}
-				status := state.ResourceStatusComplete
-				update := state.ResourceInfoUpdate{
+				status := state.ResourceOperationStatusComplete
+				update := state.ResourceOperationInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
@@ -149,15 +149,15 @@ func (m *UIModel) Run() error {
 				msgstr = msg.Message
 
 			case json.OperationStart:
-				info := &state.ResourceInfo{
+				info := &state.ResourceOperationInfo{
 					Idx:             len(m.applyInfos) + 1,
 					RawResourceAddr: hook.Resource,
-					Loc: state.ResourceInfoLocator{
+					Loc: state.ResourceOperationInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
 						Action:       string(hook.Action),
 					},
-					Status:    state.ResourceStatusStart,
+					Status:    state.ResourceOperationStatusStart,
 					StartTime: msg.TimeStamp,
 				}
 				m.applyInfos = append(m.applyInfos, info)
@@ -166,7 +166,7 @@ func (m *UIModel) Run() error {
 				msgstr = fmt.Sprintf("[%*d/%*d] %s", w, info.Idx, w, m.totalCnt, msg.Message)
 
 			case json.OperationProgress:
-				loc := state.ResourceInfoLocator{
+				loc := state.ResourceOperationInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       string(hook.Action),
@@ -181,13 +181,13 @@ func (m *UIModel) Run() error {
 				msgstr = fmt.Sprintf("[%*d/%*d] %s", w, info.Idx, w, m.totalCnt, msg.Message)
 
 			case json.OperationComplete:
-				loc := state.ResourceInfoLocator{
+				loc := state.ResourceOperationInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       string(hook.Action),
 				}
-				status := state.ResourceStatusComplete
-				update := state.ResourceInfoUpdate{
+				status := state.ResourceOperationStatusComplete
+				update := state.ResourceOperationInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
@@ -201,13 +201,13 @@ func (m *UIModel) Run() error {
 				msgstr = fmt.Sprintf("[%*d/%*d] %s", w, info.Idx, w, m.totalCnt, msg.Message)
 
 			case json.OperationErrored:
-				loc := state.ResourceInfoLocator{
+				loc := state.ResourceOperationInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       string(hook.Action),
 				}
-				status := state.ResourceStatusErrored
-				update := state.ResourceInfoUpdate{
+				status := state.ResourceOperationStatusErrored
+				update := state.ResourceOperationInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
