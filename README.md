@@ -41,6 +41,12 @@ Start Timestamp,End Timestamp,Stage,Action,Module,Resource Type,Resource Name,Re
 
 ## FAQ
 
+### How to use in CI?
+
+By default, `pipeform` requires a [`tty`](https://man7.org/linux/man-pages/man7/pty.7.html) to make the UI work, which is unavailable in most CI systems (e.g. Github Action [has no tty](https://github.com/actions/runner/issues/241)). To support this environment, the tool comes with an option `--plain-ui`, which will print out logs similar to the `terraform` default logs, except for the operations, it will prefix with a progress indicator.
+
+[Example](https://github.com/magodo/pipeform/actions/runs/12745773365/job/35520444647).
+
 ### How to copy output variables?
 
 In a successful run, the tool will end up at the `SUMMARY` stage, that displays a table of output variables defined. Users can select any of the output variables and press <kbd>c</kbd> to copy the value to the system clipboard.
