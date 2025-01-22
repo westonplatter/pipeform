@@ -10,57 +10,57 @@ import (
 	"github.com/magodo/pipeform/internal/terraform/views/json"
 )
 
-type ResourceStatus string
+type ResourceOperationStatus string
 
 const (
 	// Once received one OperationStart hook message
-	ResourceStatusStart ResourceStatus = "start"
+	ResourceOperationStatusStart ResourceOperationStatus = "start"
 	// Once received one OperationComplete hook message
-	ResourceStatusComplete ResourceStatus = "complete"
+	ResourceOperationStatusComplete ResourceOperationStatus = "complete"
 	// Once received one OperationErrored hook message
-	ResourceStatusErrored ResourceStatus = "error"
+	ResourceOperationStatusErrored ResourceOperationStatus = "error"
 
 	// TODO: Support refresh? (refresh is an independent lifecycle than the resource apply lifecycle)
 	// TODO: Support provision? (provision is a intermidiate stage in the resource apply lifecycle)
 )
 
-func resourceStatusEmoji(status ResourceStatus) string {
+func resourceOperationStatusEmoji(status ResourceOperationStatus) string {
 	switch status {
-	case ResourceStatusStart:
+	case ResourceOperationStatusStart:
 		return "🕛"
-	case ResourceStatusComplete:
+	case ResourceOperationStatusComplete:
 		return "✅"
-	case ResourceStatusErrored:
+	case ResourceOperationStatusErrored:
 		return "❌"
 	default:
 		return "❓"
 	}
 }
 
-type ResourceInfoLocator struct {
+type ResourceOperationInfoLocator struct {
 	Module       string
 	ResourceAddr string
 	Action       string
 }
 
-type ResourceInfo struct {
+type ResourceOperationInfo struct {
 	Idx             int
 	RawResourceAddr json.ResourceAddr
-	Loc             ResourceInfoLocator
-	Status          ResourceStatus
+	Loc             ResourceOperationInfoLocator
+	Status          ResourceOperationStatus
 	StartTime       time.Time
 	EndTime         time.Time
 }
 
-type ResourceInfoUpdate struct {
-	Status  *ResourceStatus
+type ResourceOperationInfoUpdate struct {
+	Status  *ResourceOperationStatus
 	Endtime *time.Time
 }
 
-// ResourceInfos records the operation information for each resource's action.
-type ResourceInfos []*ResourceInfo
+// ResourceOperationInfos records the operation information for each resource's action.
+type ResourceOperationInfos []*ResourceOperationInfo
 
-func (infos ResourceInfos) Find(loc ResourceInfoLocator) *ResourceInfo {
+func (infos ResourceOperationInfos) Find(loc ResourceOperationInfoLocator) *ResourceOperationInfo {
 	for _, info := range infos {
 		if info.Loc == loc {
 			return info
@@ -69,7 +69,7 @@ func (infos ResourceInfos) Find(loc ResourceInfoLocator) *ResourceInfo {
 	return nil
 }
 
-func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUpdate) *ResourceInfo {
+func (infos ResourceOperationInfos) Update(loc ResourceOperationInfoLocator, update ResourceOperationInfoUpdate) *ResourceOperationInfo {
 	info := infos.Find(loc)
 	if info == nil {
 		return nil
@@ -85,7 +85,7 @@ func (infos ResourceInfos) Update(loc ResourceInfoLocator, update ResourceInfoUp
 
 // ToRows turns the ResourceInfos into table rows.
 // The total is used to decorate the index as a fraction, if total > 0.
-func (infos ResourceInfos) ToRows(total int) []table.Row {
+func (infos ResourceOperationInfos) ToRows(total int) []table.Row {
 	now := time.Now()
 	var rows []table.Row
 	for _, info := range infos {
@@ -103,7 +103,7 @@ func (infos ResourceInfos) ToRows(total int) []table.Row {
 
 		row := []string{
 			idx,
-			resourceStatusEmoji(info.Status),
+			resourceOperationStatusEmoji(info.Status),
 			string(info.Loc.Action),
 			module,
 			info.Loc.ResourceAddr,
@@ -114,7 +114,7 @@ func (infos ResourceInfos) ToRows(total int) []table.Row {
 	return rows
 }
 
-func (infos ResourceInfos) ToColumns(width int) []table.Column {
+func (infos ResourceOperationInfos) ToColumns(width int) []table.Column {
 	const statusWidth = 6
 	const actionWidth = 8
 	const timeWidth = 24
@@ -135,7 +135,7 @@ func (infos ResourceInfos) ToColumns(width int) []table.Column {
 	}
 }
 
-func (infos ResourceInfos) ToCsv(stage string) []string {
+func (infos ResourceOperationInfos) ToCsv(stage string) []string {
 	var out []string
 	now := time.Now()
 	for _, info := range infos {
@@ -157,7 +157,7 @@ func (infos ResourceInfos) ToCsv(stage string) []string {
 	return out
 }
 
-func (info ResourceInfo) Duration(now time.Time) time.Duration {
+func (info ResourceOperationInfo) Duration(now time.Time) time.Duration {
 	var dur time.Duration
 	if info.EndTime.Equal(time.Time{}) {
 		dur = now.Sub(info.StartTime).Truncate(time.Second)

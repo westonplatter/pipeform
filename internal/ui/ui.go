@@ -48,10 +48,10 @@ type UIModel struct {
 
 	diags Diags
 
-	refreshInfos state.ResourceInfos
-	applyInfos   state.ResourceInfos
-
-	outputInfos state.OutputInfos
+	refreshInfos state.ResourceOperationInfos
+	planInfos    state.PlanInfos
+	applyInfos   state.ResourceOperationInfos
+	outputInfos  state.OutputInfos
 
 	versionMsg *string
 
@@ -244,14 +244,20 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// There's no much useful information for now.
 
 		case views.PlannedChangeMsg:
+			m.planInfos = append(m.planInfos, &state.PlanInfo{
+				Resource:     msg.Change.Resource,
+				Action:       msg.Change.Action,
+				PrevResource: msg.Change.PreviousResource,
+				Reason:       msg.Change.Reason,
+			})
+
 			// Normally, we don't need to handle the PlannedChangeMsg here, as the ChangeSummaryMsg has all these information.
 			// The exception is that when apply with a plan file, there is no ChangeSummaryMsg sent from Terraform at this moment.
 			// (see: https://github.com/magodo/pipeform/issues/1)
 			// The counting here is a fallback logic to cover the case above. Otherwise, it will just be overwritten by ChangeSummaryMsg.
 			//
 			// TODO: Once https://github.com/hashicorp/terraform/pull/36245 merged, remove this part.
-
-			m.logger.Debug("Planned Change", "action", msg.Change.Action, "resource", msg.Change.Resource.Addr, "prev_resource", msg.Change.PreviousResource)
+			//
 			// Referencing the logic of terraform: internal/command/views/operation.go
 			// But we also count the "import"
 			switch msg.Change.Action {
@@ -296,27 +302,27 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logger.Debug("Hook message", "type", fmt.Sprintf("%T", msg.Hook))
 			switch hook := msg.Hook.(type) {
 			case json.RefreshStart:
-				res := &state.ResourceInfo{
+				res := &state.ResourceOperationInfo{
 					Idx:             len(m.refreshInfos) + 1,
 					RawResourceAddr: hook.Resource,
-					Loc: state.ResourceInfoLocator{
+					Loc: state.ResourceOperationInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
 						Action:       "refresh",
 					},
-					Status:    state.ResourceStatusStart,
+					Status:    state.ResourceOperationStatusStart,
 					StartTime: msg.TimeStamp,
 				}
 				m.refreshInfos = append(m.refreshInfos, res)
 
 			case json.RefreshComplete:
-				loc := state.ResourceInfoLocator{
+				loc := state.ResourceOperationInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       "refresh",
 				}
-				status := state.ResourceStatusComplete
-				update := state.ResourceInfoUpdate{
+				status := state.ResourceOperationStatusComplete
+				update := state.ResourceOperationInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
@@ -326,15 +332,15 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case json.OperationStart:
-				res := &state.ResourceInfo{
+				res := &state.ResourceOperationInfo{
 					Idx:             len(m.applyInfos) + 1,
 					RawResourceAddr: hook.Resource,
-					Loc: state.ResourceInfoLocator{
+					Loc: state.ResourceOperationInfoLocator{
 						Module:       hook.Resource.Module,
 						ResourceAddr: hook.Resource.Addr,
 						Action:       string(hook.Action),
 					},
-					Status:    state.ResourceStatusStart,
+					Status:    state.ResourceOperationStatusStart,
 					StartTime: msg.TimeStamp,
 				}
 				m.applyInfos = append(m.applyInfos, res)
@@ -343,13 +349,13 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Ignore
 
 			case json.OperationComplete:
-				loc := state.ResourceInfoLocator{
+				loc := state.ResourceOperationInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       string(hook.Action),
 				}
-				status := state.ResourceStatusComplete
-				update := state.ResourceInfoUpdate{
+				status := state.ResourceOperationStatusComplete
+				update := state.ResourceOperationInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
@@ -363,13 +369,13 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, m.progress.SetPercent(percentage))
 
 			case json.OperationErrored:
-				loc := state.ResourceInfoLocator{
+				loc := state.ResourceOperationInfoLocator{
 					Module:       hook.Resource.Module,
 					ResourceAddr: hook.Resource.Addr,
 					Action:       string(hook.Action),
 				}
-				status := state.ResourceStatusErrored
-				update := state.ResourceInfoUpdate{
+				status := state.ResourceOperationStatusErrored
+				update := state.ResourceOperationInfoUpdate{
 					Status:  &status,
 					Endtime: &msg.TimeStamp,
 				}
@@ -432,6 +438,8 @@ func (m *UIModel) setTableOutlook() {
 	switch m.getViewState() {
 	case ViewStateRefresh:
 		m.table.SetColumns(m.refreshInfos.ToColumns(m.tableSize.Width))
+	case ViewStatePlan:
+		m.table.SetColumns(m.planInfos.ToColumns(m.tableSize.Width))
 	case ViewStateApply:
 		m.table.SetColumns(m.applyInfos.ToColumns(m.tableSize.Width))
 	case ViewStateSummary:
@@ -444,6 +452,8 @@ func (m *UIModel) setTableRows() {
 	switch m.getViewState() {
 	case ViewStateRefresh:
 		m.table.SetRows(m.refreshInfos.ToRows(0))
+	case ViewStatePlan:
+		m.table.SetRows(m.planInfos.ToRows())
 	case ViewStateApply:
 		m.table.SetRows(m.applyInfos.ToRows(m.totalCnt))
 	case ViewStateSummary:
@@ -528,7 +538,9 @@ func (m UIModel) View() string {
 
 	s += "\n\n" + m.stateView()
 
-	s += "\n\n" + StyleTableBase.Render(m.table.View())
+	if m.getViewState() != ViewStateIdle {
+		s += "\n\n" + StyleTableBase.Render(m.table.View())
+	}
 
 	var progressBar string
 	if m.getViewState() == ViewStateApply {
