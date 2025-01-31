@@ -95,3 +95,11 @@ $ kill -SIGINT 88374
 ```
 
 After `terraform` being interrupted in the middle, `pipeform` won't just quit. Instead, it will respond to the diagnostics sent from `terraform` (once `terraform` finishes its *graceful* handling) and display the error indicators to users.
+
+### Windows Powershell Doesn't Work?
+
+Windows Powershell (at up to 5.1.22621.4391) does not pipe byte-streams like UNIX shells or the DOS Command interpreter. The Powershell also faces the same [issue](https://github.com/PowerShell/PowerShell/issues/1908), until v7.4.0-preview.4 (with this [PR](https://github.com/PowerShell/PowerShell/pull/17857#issuecomment-1613864139) merged).
+
+For users want to use `pipeform` under PowerShell, please ensure you have installed PowerShell newer than v7.4.0.
+
+For users want to use `pipeform` under Windows Powershell, please invoke the DOS Command interpreter instead: `cmd "/c terraform.exe <command> -json | pipeform.exe"` (or just use the DOS Command interpreter instead).
