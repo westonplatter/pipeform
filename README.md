@@ -11,6 +11,7 @@
 - `terraform refresh -json`
 - `terraform plan -json`
 - `terraform apply -auto-approve -json`
+- `atmos terraform plan <component> --stage dev -- -json`
 
 Note that all the commands must have the `-json` flag specified, as the tool is built on top of the [Terraform machine-readable UI](https://developer.hashicorp.com/terraform/internals/machine-readable-ui).
 
