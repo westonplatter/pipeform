@@ -22,6 +22,7 @@ Example:
 
 ```shell
 go install github.com/magodo/pipeform@main
+# or GOBIN=/usr/local/bin/ go install github.com/magodo/pipeform@main
 ```
 
 ## Timing CSV File
